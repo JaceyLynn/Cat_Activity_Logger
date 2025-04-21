@@ -79,13 +79,18 @@ function updateUI(
 
 }
 
-
-
-
 function updateBoxText(box, time, duration, showPaw = false, status = "-") {
   const p = box.querySelector('p');
   const pawLine = showPaw ? "🐾<br>" : "";
-  p.innerHTML = `${pawLine}Current status:<br>${status}<br>Last active:<br>${time}<br>Duration:<br>${duration}`;
+  p.innerHTML = `
+    ${pawLine}
+    <span class="label">Current status:</span><br>
+    ${status}<br>
+    <span class="label">Last active:</span><br>
+    ${time}<br>
+    <span class="label">Duration:</span><br>
+    ${duration}
+  `;
 }
 
 setInterval(fetchCatData, 3000);

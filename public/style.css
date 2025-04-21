@@ -123,3 +123,17 @@ body {
     margin-top: 1rem;
     min-height: 80px;
   }
+
+.status-box p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Lighter colored labels */
+.status-box p .label {
+  color: #DED9D3;
+  font-size: 0.75rem;
+  font-weight: normal;
+}
+
