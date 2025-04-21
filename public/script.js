@@ -1,5 +1,5 @@
 const WEB_APP_URL =
-  "https://script.google.com/macros/s/AKfycbxex7nE1A61YS93nJMAi5GUotRFtzpj13RFI7z4EyGmTEOwGPBUiZeJsfeUH4LUZ_0WJA/exec";
+  "https://script.google.com/macros/s/AKfycbyX43LlCbY9Z1XXowkOhi18ksW8ez94HJQLOvsJp1NWwrnFpMUqyjxDMvFt0sLUkGM8ig/exec";
 
 async function fetchCatData() {
   try {
@@ -15,45 +15,64 @@ async function fetchCatData() {
     const latest = data[data.length - 1];
 
     console.log("Latest cat activity:", latest);
+    
+        // Look backward to find the latest CAT DETECTED rows per sensor
+    const lastEvent2Row = [...data].reverse().find(row => row.event2 === "cat_detected");
+    const lastEvent1Row = [...data].reverse().find(row => row.event1 === "cat_detected");
 
-    updateUI(latest); // pass just this object to your UI function
+    updateUI(latest, lastEvent2Row, lastEvent1Row);
   } catch (err) {
     console.error("Error fetching cat data:", err);
   }
 }
 
-function updateUI(latest) {
+function updateUI(latest, bedLog, windowLog, foodLog) {
   const catBed = document.getElementById('cat-bed');
   const windowSpot = document.getElementById('window');
   const foodBowl = document.getElementById('food-bowl');
 
   [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove('active'));
 
+  // CAT BED
   const bedDetected = latest.event2 === "cat_detected";
-  const windowDetected = latest.event1 === "cat_detected";
-  const foodDetected = latest.Location === "Food Bowl";
-
   if (bedDetected) {
     catBed.classList.add('active');
-    updateBoxText(catBed, latest.local_timestamp, latest.duration2, true, "Cat Detected");
-  } else {
-    updateBoxText(catBed, "-", "-", false, "Nothing Detected");
   }
+  updateBoxText(
+    catBed,
+    bedLog?.local_timestamp || "-",
+    bedLog?.duration2 || "-",
+    bedDetected,
+    bedDetected ? "Cat Detected" : "Nothing Detected"
+  );
 
+  // WINDOW
+  const windowDetected = latest.event1 === "cat_detected";
   if (windowDetected) {
     windowSpot.classList.add('active');
-    updateBoxText(windowSpot, latest.local_timestamp, latest.duration1, true, "Cat Detected");
-  } else {
-    updateBoxText(windowSpot, "-", "-", false, "Nothing Detected");
   }
+  updateBoxText(
+    windowSpot,
+    windowLog?.local_timestamp || "-",
+    windowLog?.duration1 || "-",
+    windowDetected,
+    windowDetected ? "Cat Detected" : "Nothing Detected"
+  );
 
+  // FOOD BOWL
+  const foodDetected = latest.Location === "Food Bowl";
   if (foodDetected) {
     foodBowl.classList.add('active');
-    updateBoxText(foodBowl, latest.local_timestamp, latest.Duration || "-", true, "Cat Detected");
-  } else {
-    updateBoxText(foodBowl, "-", "-", false, "Nothing Detected");
   }
+  updateBoxText(
+    foodBowl,
+    foodLog?.local_timestamp || "-",
+    foodLog?.Duration || "-",
+    foodDetected,
+    foodDetected ? "Cat Detected" : "Nothing Detected"
+  );
 }
+
 
 
 function updateBoxText(box, time, duration, showPaw = false, status = "-") {
