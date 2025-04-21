@@ -1,4 +1,5 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxex7nE1A61YS93nJMAi5GUotRFtzpj13RFI7z4EyGmTEOwGPBUiZeJsfeUH4LUZ_0WJA/exec"; 
+const WEB_APP_URL =
+  "https://script.google.com/macros/s/AKfycbxex7nE1A61YS93nJMAi5GUotRFtzpj13RFI7z4EyGmTEOwGPBUiZeJsfeUH4LUZ_0WJA/exec";
 
 async function fetchCatData() {
   try {
@@ -20,23 +21,23 @@ async function fetchCatData() {
     console.error("Error fetching cat data:", err);
   }
 }
-  
-function updateUI(latest) {
-  const catBed = document.getElementById('cat-bed');
-  const windowSpot = document.getElementById('window');
-  const foodBowl = document.getElementById('food-bowl');
 
-  [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove('active'));
+function updateUI(latest) {
+  const catBed = document.getElementById("cat-bed");
+  const windowSpot = document.getElementById("window");
+  const foodBowl = document.getElementById("food-bowl");
+
+  [catBed, windowSpot, foodBowl].forEach((el) => el.classList.remove("active"));
 
   if (latest.event2 === "cat_detected") {
-    catBed.classList.add('active');
+    catBed.classList.add("active");
     updateBoxText(catBed, latest.local_timestamp, latest.duration2, true);
   } else {
     updateBoxText(catBed, "-", "-", false);
   }
 
   if (latest.event1 === "cat_detected") {
-    windowSpot.classList.add('active');
+    windowSpot.classList.add("active");
     updateBoxText(windowSpot, latest.local_timestamp, latest.duration1, true);
   } else {
     updateBoxText(windowSpot, "-", "-", false);
@@ -49,12 +50,12 @@ function updateUI(latest) {
   //   updateBoxText(foodBowl, "-", "-", false);
   // }
 }
-  
+
 function updateBoxText(box, time, duration, showPaw = false) {
-  const p = box.querySelector('p');
-  const paw = showPaw ? "🐱 " : "";
-  p.innerHTML = `${paw}Last active:<br>${time}<br>Duration:<br>${duration}`;
+  const p = box.querySelector("p");
+  const pawLine = showPaw ? "🐈<br>" : "";
+  p.innerHTML = `${pawLine}Last active:<br>${time}<br>Duration:<br>${duration}`;
 }
-  
-  setInterval(fetchCatData, 3000);
-  fetchCatData();
+
+setInterval(fetchCatData, 3000);
+fetchCatData();
