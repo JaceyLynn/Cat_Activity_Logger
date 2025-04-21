@@ -130,6 +130,14 @@ h1 {
   color: #444;
 }
 
+h2{
+  margin-top: 0;
+  font-size: 2.5rem;
+  font-weight: normal;
+  font-family: "Marvel", sans-serif;
+  color: white;
+}
+
 .log-content {
   margin-top: 1rem;
   min-height: 80px;
