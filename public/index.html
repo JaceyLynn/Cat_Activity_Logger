@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Where is my cat now?</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Marvel:ital,wght@0,400;0,700;1,400;1,700&family=Petit+Formal+Script&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <h1>Where is my cat now?</h1>
+    
+    <div class="status-section">
+      <div class="status-box active" id="cat-bed">
+        <div class="icon">🛏️</div>
+        <h2>CAT BED</h2>
+        <p>Last active:<br>Duration:<br></p>
+      </div>
+      <div class="status-box" id="food-bowl">
+        <div class="icon">🥣</div>
+        <h2>FOOD BOWL</h2>
+        <p>Last active:<br>Duration:</p>
+      </div>
+      <div class="status-box" id="window">
+        <div class="icon">🪟</div>
+        <h2>WINDOW</h2>
+        <p>Last active:<br>Duration:</p>
+      </div>
+    </div>
+
+    <h1 class="history-title">History log</h1>
+    <div class="dropdown-wrapper">
+      <select>
+        <option>Date Filter</option>
+        <option>Today</option>
+        <option>This Week</option>
+      </select>
+    </div>
+
+    <div class="log-section">
+      <div class="log-box">
+        <h3>Session Log</h3>
+        <div class="log-content"></div>
+      </div>
+      <div class="log-box">
+        <h3>Hourly Log</h3>
+        <div class="log-content"></div>
+      </div>
+      <div class="log-box">
+        <h3>Pattern Log</h3>
+        <div class="log-content"></div>
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
