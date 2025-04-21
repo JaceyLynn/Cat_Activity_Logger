@@ -23,38 +23,43 @@ async function fetchCatData() {
 }
 
 function updateUI(latest) {
-  const catBed = document.getElementById("cat-bed");
-  const windowSpot = document.getElementById("window");
-  const foodBowl = document.getElementById("food-bowl");
+  const catBed = document.getElementById('cat-bed');
+  const windowSpot = document.getElementById('window');
+  const foodBowl = document.getElementById('food-bowl');
 
-  [catBed, windowSpot, foodBowl].forEach((el) => el.classList.remove("active"));
+  [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove('active'));
 
-  if (latest.event2 === "cat_detected") {
-    catBed.classList.add("active");
-    updateBoxText(catBed, latest.local_timestamp, latest.duration2, true);
+  const bedDetected = latest.event2 === "cat_detected";
+  const windowDetected = latest.event1 === "cat_detected";
+  const foodDetected = latest.Location === "Food Bowl";
+
+  if (bedDetected) {
+    catBed.classList.add('active');
+    updateBoxText(catBed, latest.local_timestamp, latest.duration2, true, "Cat Detected");
   } else {
-    updateBoxText(catBed, "-", "-", false);
+    updateBoxText(catBed, "-", "-", false, "Nothing Detected");
   }
 
-  if (latest.event1 === "cat_detected") {
-    windowSpot.classList.add("active");
-    updateBoxText(windowSpot, latest.local_timestamp, latest.duration1, true);
+  if (windowDetected) {
+    windowSpot.classList.add('active');
+    updateBoxText(windowSpot, latest.local_timestamp, latest.duration1, true, "Cat Detected");
   } else {
-    updateBoxText(windowSpot, "-", "-", false);
+    updateBoxText(windowSpot, "-", "-", false, "Nothing Detected");
   }
 
-  // if (latest.Location === "Food Bowl") {
-  //   foodBowl.classList.add('active');
-  //   updateBoxText(foodBowl, latest.local_timestamp, latest.Duration || "-", true);
-  // } else {
-  //   updateBoxText(foodBowl, "-", "-", false);
-  // }
+  if (foodDetected) {
+    foodBowl.classList.add('active');
+    updateBoxText(foodBowl, latest.local_timestamp, latest.Duration || "-", true, "Cat Detected");
+  } else {
+    updateBoxText(foodBowl, "-", "-", false, "Nothing Detected");
+  }
 }
 
-function updateBoxText(box, time, duration, showPaw = false) {
-  const p = box.querySelector("p");
-  const pawLine = showPaw ? "🐈<br>" : "";
-  p.innerHTML = `${pawLine}Last active:<br>${time}<br>Duration:<br>${duration}`;
+
+function updateBoxText(box, time, duration, showPaw = false, status = "-") {
+  const p = box.querySelector('p');
+  const pawLine = showPaw ? "🐾<br>" : "";
+  p.innerHTML = `${pawLine}Current status:<br>${status}<br>Last active:<br>${time}<br>Duration:<br>${duration}`;
 }
 
 setInterval(fetchCatData, 3000);
