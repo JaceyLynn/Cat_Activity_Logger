@@ -1,5 +1,5 @@
 const WEB_APP_URL =
-  "https://script.google.com/macros/s/AKfycbyZO5jbqyBEHpXrzF33dSkk9fvePl1L02vvGAaLZdFYN80IHqFEbzAzE4rcbH2xknYdTw/execc";
+  "https://script.google.com/macros/s/AKfycbzfe0g5mZ2kn57Pw4mW_yb1-DNwAh4FHuUVbXMMISh-alx98LbghIj7mB-pXz36_l-yZg/exec";
 
 async function fetchCatData() {
   try {

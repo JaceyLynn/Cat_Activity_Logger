@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Your Google Apps Script Web App URL
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZO5jbqyBEHpXrzF33dSkk9fvePl1L02vvGAaLZdFYN80IHqFEbzAzE4rcbH2xknYdTw/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfe0g5mZ2kn57Pw4mW_yb1-DNwAh4FHuUVbXMMISh-alx98LbghIj7mB-pXz36_l-yZg/exec";
 
 app.use(express.static("public")); // Serve static files from the 'public' folder
 
