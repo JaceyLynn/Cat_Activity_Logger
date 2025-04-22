@@ -29,14 +29,14 @@
 }
 
 body {
-  margin: 0;
+  margin: auto;
   font-family: "Marvel", sans-serif;
   background: #e8e5dd;
   color: #333;
 }
 
 .container {
-  padding: 2rem;
+  padding: 3rem;
   max-width: 900px;
   margin: auto;
 }
