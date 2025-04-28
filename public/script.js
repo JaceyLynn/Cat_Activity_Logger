@@ -27,13 +27,13 @@ async function fetchCatData() {
     let bedFrequency = 0;
     let windowFrequency = 0;
     let foodFrequency = 0;
-    // Initialize "previous meaningful state" separately for each event
+    // data for charts making, sessions info
     let sessionLog = [];
-
+    // Initialize "previous meaningful state" separately for each event
     let lastBedStatus = null;
     let lastWindowStatus = null;
     let lastFoodStatus = null;
-
+    // start time for each session at each loc
     let bedSessionStart = null;
     let windowSessionStart = null;
     let foodSessionStart = null;
@@ -414,13 +414,25 @@ function drawPatternChart(sessionLog) {
     .y(d => y(d.location))
     .curve(d3.curveMonotoneX); // Smooth curve, or .curve(d3.curveLinear) for straight lines
 
-  // Draw the connecting line
-  svg.append("path")
-    .datum(data)
-    .attr("fill", "none")
-    .attr("stroke", "#666") // Line color (dark grey)
-    .attr("stroke-width", 0.5)
-    .attr("d", line);
+// Draw the connecting line with animation
+const path = svg.append("path")
+  .datum(data)
+  .attr("fill", "none")
+  .attr("stroke", "#666") // Line color
+  .attr("stroke-width", 2)
+  .attr("d", line);
+
+// Animate the path drawing
+const totalLength = path.node().getTotalLength();
+
+path
+  .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+  .attr("stroke-dashoffset", totalLength)
+  .transition()
+  .duration(3000) // 3 seconds (adjust as you like)
+  .ease(d3.easeLinear)
+  .attr("stroke-dashoffset", 0);
+
 
   // Draw the dots
   svg.append("g")
