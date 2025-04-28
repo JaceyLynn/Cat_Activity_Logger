@@ -11,25 +11,53 @@ async function fetchCatData() {
       return;
     }
 
-    // Get the latest (last) row of data
     const latest = data[data.length - 1];
 
-    console.log("Latest cat activity:", latest);
-    
-        // Look backward to find the latest CAT DETECTED rows per sensor
-    const lastEvent2Row = [...data].reverse().find(row => row.event2 === "cat_detected");
-    const lastEvent1Row = [...data].reverse().find(row => row.event1 === "cat_detected");
+    // Duration calculation
+    const bedDurationSeconds = data.filter(
+      (row) => row.event2 === "cat_detected"
+    ).length;
+    const windowDurationSeconds = data.filter(
+      (row) => row.event1 === "cat_detected"
+    ).length;
+    const foodDurationSeconds = data.filter(
+      (row) => row.event3 === "cat_detected"
+    ).length;
 
-   // Last non-null durations
-    const lastValidDuration2Row = [...data].reverse().find(row => row.duration2 && row.duration2 !== "null");
-    const lastValidDuration1Row = [...data].reverse().find(row => row.duration1 && row.duration1 !== "null");
+    // Frequency calculation
+    let bedFrequency = 0;
+    let windowFrequency = 0;
+    let foodFrequency = 0;
+
+    for (let i = 1; i < data.length; i++) {
+      if (
+        data[i - 1].event2 === "nothing_detected" &&
+        data[i].event2 === "cat_detected"
+      ) {
+        bedFrequency++;
+      }
+      if (
+        data[i - 1].event1 === "nothing_detected" &&
+        data[i].event1 === "cat_detected"
+      ) {
+        windowFrequency++;
+      }
+      if (
+        data[i - 1].event3 === "nothing_detected" &&
+        data[i].event3 === "cat_detected"
+      ) {
+        foodFrequency++;
+      }
+    }
 
     updateUI(
       latest,
-      lastEvent2Row,
-      lastEvent1Row,
-      lastValidDuration2Row,
-      lastValidDuration1Row,
+      bedDurationSeconds,
+      windowDurationSeconds,
+      foodDurationSeconds,
+      bedFrequency,
+      windowFrequency,
+      foodFrequency
     );
   } catch (err) {
     console.error("Error fetching cat data:", err);
@@ -38,58 +66,63 @@ async function fetchCatData() {
 
 function updateUI(
   latest,
-  bedLog,
-  windowLog,
-  bedDurationRow,
-  windowDurationRow,
+  bedDurationSeconds,
+  windowDurationSeconds,
+  foodDurationSeconds,
+  bedFrequency,
+  windowFrequency,
+  foodFrequency
 ) {
-  const catBed = document.getElementById('cat-bed');
-  const windowSpot = document.getElementById('window');
-  const foodBowl = document.getElementById('food-bowl');
+  const catBed = document.getElementById("cat-bed");
+  const windowSpot = document.getElementById("window");
+  const foodBowl = document.getElementById("food-bowl");
 
-  [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove('active'));
+  [catBed, windowSpot, foodBowl].forEach((el) => el.classList.remove("active"));
 
   const bedDetected = latest.event2 === "cat_detected";
   const windowDetected = latest.event1 === "cat_detected";
-  const foodDetected = latest.Location === "Food Bowl";
+  const foodDetected = latest.event3 === "cat_detected";
 
-  if (bedDetected) catBed.classList.add('active');
-  if (windowDetected) windowSpot.classList.add('active');
-  if (foodDetected) foodBowl.classList.add('active');
+  if (bedDetected) catBed.classList.add("active");
+  if (windowDetected) windowSpot.classList.add("active");
+  if (foodDetected) foodBowl.classList.add("active");
 
-  // CAT BED
   updateBoxText(
     catBed,
-    bedLog?.local_timestamp || "-",
-    bedDurationRow?.duration2 || "-",
     bedDetected,
-    bedDetected ? "Cat Detected" : "Nothing Detected"
+    bedDurationSeconds,
+    bedFrequency,
+    "Cat Bed"
   );
-
-  // WINDOW
   updateBoxText(
     windowSpot,
-    windowLog?.local_timestamp || "-",
-    windowDurationRow?.duration1 || "-",
     windowDetected,
-    windowDetected ? "Cat Detected" : "Nothing Detected"
+    windowDurationSeconds,
+    windowFrequency,
+    "Window"
   );
-
-  // FOOD BOWL
-
+  updateBoxText(
+    foodBowl,
+    foodDetected,
+    foodDurationSeconds,
+    foodFrequency,
+    "Food Bowl"
+  );
 }
 
-function updateBoxText(box, time, duration, showPaw = false, status = "-") {
-  const p = box.querySelector('p');
-  const pawLine = showPaw ? "🐾<br>" : "";
+function updateBoxText(box, isActive, durationSeconds, frequency, label) {
+  const p = box.querySelector("p");
+  const pawLine = isActive ? "🐾<br>" : "";
+  const durationMinutes = (durationSeconds / 60).toFixed(1); // rounded to 1 decimal
+
   p.innerHTML = `
     ${pawLine}
     <span class="label">Current status:</span><br>
-    ${status}<br>
-    <span class="label">Last active:</span><br>
-    ${time}<br>
-    <span class="label">Duration:</span><br>
-    ${duration}
+    ${isActive ? "Cat Detected" : "Nothing Detected"}<br>
+    <span class="label">Total duration:</span><br>
+    ${durationMinutes} min (${durationSeconds} sec)<br>
+    <span class="label">Number of sessions:</span><br>
+    ${frequency}
   `;
 }
 
