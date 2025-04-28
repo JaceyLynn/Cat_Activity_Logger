@@ -1,6 +1,7 @@
 const WEB_APP_URL =
   "https://script.google.com/macros/s/AKfycbzfe0g5mZ2kn57Pw4mW_yb1-DNwAh4FHuUVbXMMISh-alx98LbghIj7mB-pXz36_l-yZg/exec";
 
+
 async function fetchCatData() {
   try {
     const res = await fetch("/catdata");
@@ -13,40 +14,34 @@ async function fetchCatData() {
 
     const latest = data[data.length - 1];
 
-    // Duration calculation
-    const bedDurationSeconds = data.filter(
-      (row) => row.event2 === "cat_detected"
-    ).length;
-    const windowDurationSeconds = data.filter(
-      (row) => row.event1 === "cat_detected"
-    ).length;
-    const foodDurationSeconds = data.filter(
-      (row) => row.event3 === "cat_detected"
-    ).length;
+    // Duration counts
+    const bedDurationSeconds = data.filter(row => row.event2 === "cat_detected").length;
+    const windowDurationSeconds = data.filter(row => row.event1 === "cat_detected").length;
+    const foodDurationSeconds = data.filter(row => row.event3 === "cat_detected").length;
 
-    // Frequency calculation
+    // Frequency (transitions) counts, ignoring blanks
     let bedFrequency = 0;
     let windowFrequency = 0;
     let foodFrequency = 0;
 
     for (let i = 1; i < data.length; i++) {
-      if (
-        data[i - 1].event2 === "nothing_detected" &&
-        data[i].event2 === "cat_detected"
-      ) {
-        bedFrequency++;
+      // Bed
+      if (data[i - 1].event2 && data[i].event2) { // both not null
+        if (data[i - 1].event2 === "nothing_detected" && data[i].event2 === "cat_detected") {
+          bedFrequency++;
+        }
       }
-      if (
-        data[i - 1].event1 === "nothing_detected" &&
-        data[i].event1 === "cat_detected"
-      ) {
-        windowFrequency++;
+      // Window
+      if (data[i - 1].event1 && data[i].event1) {
+        if (data[i - 1].event1 === "nothing_detected" && data[i].event1 === "cat_detected") {
+          windowFrequency++;
+        }
       }
-      if (
-        data[i - 1].event3 === "nothing_detected" &&
-        data[i].event3 === "cat_detected"
-      ) {
-        foodFrequency++;
+      // Food Bowl
+      if (data[i - 1].event3 && data[i].event3) {
+        if (data[i - 1].event3 === "nothing_detected" && data[i].event3 === "cat_detected") {
+          foodFrequency++;
+        }
       }
     }
 
@@ -63,6 +58,7 @@ async function fetchCatData() {
     console.error("Error fetching cat data:", err);
   }
 }
+
 
 function updateUI(
   latest,
