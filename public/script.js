@@ -368,13 +368,13 @@ function drawHourlyChart(hourlyData) {
 
 
 function drawPatternChart(sessionLog) {
-  d3.select("#pattern-chart").html(""); // Clear any previous chart
+  d3.select("#pattern-chart").html(""); // Clear previous chart
 
   const width = 1000;
   const height = 300;
   const margin = { top: 20, right: 30, bottom: 30, left: 80 };
 
-  // Parse time
+  // Parse times
   const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
   const data = sessionLog.map(d => {
@@ -385,27 +385,44 @@ function drawPatternChart(sessionLog) {
     };
   });
 
-  // X: Time scale (24 hours)
+  // Sort sessions by time (important for connecting)
+  data.sort((a, b) => a.timeOfDay - b.timeOfDay);
+
+  // X: Time scale (24h)
   const x = d3.scaleTime()
     .domain([new Date(1970, 0, 1, 0, 0, 0), new Date(1970, 0, 1, 23, 59, 59)])
     .range([margin.left, width - margin.right]);
 
-  // Y: Location scale with your specified order
+  // Y: Custom location scale
   const y = d3.scalePoint()
-    .domain(["Bed", "Food", "Window"]) // **Your desired order**
+    .domain(["Bed", "Food", "Window"])
     .range([margin.top, height - margin.bottom])
     .padding(0.5);
 
   const color = d3.scaleOrdinal()
     .domain(["Bed", "Food", "Window"])
-    .range(["#8a7b9f", "#b28f7e", "#6d948a"]); // Same color scheme you picked
+    .range(["#8a7b9f", "#b28f7e", "#6d948a"]);
 
   const svg = d3.select("#pattern-chart")
     .append("svg")
     .attr("width", width)
     .attr("height", height);
 
-  // Draw dots (one per session)
+  // 🧵 Line generator (connect points)
+  const line = d3.line()
+    .x(d => x(d.timeOfDay))
+    .y(d => y(d.location))
+    .curve(d3.curveMonotoneX); // Smooth curve, or .curve(d3.curveLinear) for straight lines
+
+  // Draw the connecting line
+  svg.append("path")
+    .datum(data)
+    .attr("fill", "none")
+    .attr("stroke", "#666") // Line color (dark grey)
+    .attr("stroke-width", 2)
+    .attr("d", line);
+
+  // Draw the dots
   svg.append("g")
     .selectAll("circle")
     .data(data)
@@ -415,16 +432,17 @@ function drawPatternChart(sessionLog) {
     .attr("r", 5)
     .attr("fill", d => color(d.location));
 
-  // X Axis (time of day)
+  // X Axis
   svg.append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
     .call(d3.axisBottom(x).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat("%H:%M")));
 
-  // Y Axis (locations)
+  // Y Axis
   svg.append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y));
 }
+
 
 
 setInterval(fetchCatData, 3000);
