@@ -24,47 +24,69 @@ async function fetchCatData() {
       (row) => row.event3 === "cat_detected"
     ).length;
 
+    let bedFrequency = 0;
+    let windowFrequency = 0;
+    let foodFrequency = 0;
     // Initialize "previous meaningful state" separately for each event
     let lastBedStatus = null;
     let lastWindowStatus = null;
     let lastFoodStatus = null;
 
-    let bedFrequency = 0;
-    let windowFrequency = 0;
-    let foodFrequency = 0;
+    // Flags to monitor if we're waiting for a second "cat_detected"
+    let bedAwaitingSecondCat = false;
+    let windowAwaitingSecondCat = false;
+    let foodAwaitingSecondCat = false;
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
 
-      // Bed transitions
+      // --- Bed ---
       if (row.event2) {
         if (
           lastBedStatus === "nothing_detected" &&
           row.event2 === "cat_detected"
         ) {
-          bedFrequency++;
+          bedAwaitingSecondCat = true; // waiting for a second "cat_detected"
+        } else if (bedAwaitingSecondCat && row.event2 === "cat_detected") {
+          bedFrequency++; // now confirm the session
+          bedAwaitingSecondCat = false; // reset
+        } else if (bedAwaitingSecondCat && row.event2 === "nothing_detected") {
+          bedAwaitingSecondCat = false; // cat left immediately — no session
         }
-        lastBedStatus = row.event2; // Update memory if not blank
+        lastBedStatus = row.event2;
       }
 
-      // Window transitions
+      // --- Window ---
       if (row.event1) {
         if (
           lastWindowStatus === "nothing_detected" &&
           row.event1 === "cat_detected"
         ) {
+          windowAwaitingSecondCat = true;
+        } else if (windowAwaitingSecondCat && row.event1 === "cat_detected") {
           windowFrequency++;
+          windowAwaitingSecondCat = false;
+        } else if (
+          windowAwaitingSecondCat &&
+          row.event1 === "nothing_detected"
+        ) {
+          windowAwaitingSecondCat = false;
         }
         lastWindowStatus = row.event1;
       }
 
-      // Food transitions
+      // --- Food Bowl ---
       if (row.event3) {
         if (
           lastFoodStatus === "nothing_detected" &&
           row.event3 === "cat_detected"
         ) {
+          foodAwaitingSecondCat = true;
+        } else if (foodAwaitingSecondCat && row.event3 === "cat_detected") {
           foodFrequency++;
+          foodAwaitingSecondCat = false;
+        } else if (foodAwaitingSecondCat && row.event3 === "nothing_detected") {
+          foodAwaitingSecondCat = false;
         }
         lastFoodStatus = row.event3;
       }
