@@ -19,6 +19,44 @@ async function fetchCatData() {
     const windowDurationSeconds = data.filter(row => row.event1 === "cat_detected").length;
     const foodDurationSeconds = data.filter(row => row.event3 === "cat_detected").length;
 
+    // Initialize "previous meaningful state" separately for each event
+let lastBedStatus = null;
+let lastWindowStatus = null;
+let lastFoodStatus = null;
+    
+        let bedFrequency = 0;
+    let windowFrequency = 0;
+    let foodFrequency = 0;
+
+for (let i = 0; i < data.length; i++) {
+  const row = data[i];
+
+  // Bed transitions
+  if (row.event2) {
+    if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
+      bedFrequency++;
+    }
+    lastBedStatus = row.event2; // Update memory if not blank
+  }
+
+  // Window transitions
+  if (row.event1) {
+    if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
+      windowFrequency++;
+    }
+    lastWindowStatus = row.event1;
+  }
+
+  // Food transitions
+  if (row.event3) {
+    if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
+      foodFrequency++;
+    }
+    lastFoodStatus = row.event3;
+  }
+}
+
+    
     // Frequency (transitions) counts, ignoring blanks
     let bedFrequency = 0;
     let windowFrequency = 0;
