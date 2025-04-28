@@ -110,7 +110,7 @@ function updateUI(
   bedFrequency,
   windowFrequency,
   foodFrequency,
-   sessionLog
+  sessionLog
 ) {
   const catBed = document.getElementById("cat-bed");
   const windowSpot = document.getElementById("window");
