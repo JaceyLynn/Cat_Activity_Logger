@@ -134,6 +134,32 @@ async function fetchCatData() {
   }
 }
 
+function prepareHourlySummary(sessionLog) {
+  // Initialize hourly summary
+  const hours = Array.from({ length: 24 }, (_, i) => ({
+    hour: `${String(i).padStart(2, "0")}:00`,
+    Bed: 0,
+    Food: 0,
+    Window: 0,
+  }));
+
+  const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
+
+  sessionLog.forEach((session) => {
+    const start = parseTime(session.startTime);
+    const hour = start.getHours();
+    if (session.location === "Bed") {
+      hours[hour].Bed += session.durationSeconds;
+    } else if (session.location === "Food") {
+      hours[hour].Food += session.durationSeconds;
+    } else if (session.location === "Window") {
+      hours[hour].Window += session.durationSeconds;
+    }
+  });
+
+  return hours;
+}
+
 function updateUI(
   latest,
   bedDurationSeconds,
@@ -180,6 +206,8 @@ function updateUI(
     "Food Bowl"
   );
   drawSessionChart(sessionLog);
+  const hourlyData = prepareHourlySummary(sessionLog);
+  drawHourlyChart(hourlyData);
 }
 
 function updateBoxText(box, isActive, durationSeconds, frequency, label) {
@@ -277,6 +305,64 @@ function drawSessionChart(sessionLog) {
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y).ticks(5));
+}
+
+function drawHourlyChart(hourlyData) {
+  d3.select("#hourly-chart").html(""); // Clear previous chart
+
+  const width = 600;
+  const height = 600;
+  const margin = { top: 20, right: 30, bottom: 30, left: 50 };
+
+  const keys = ["Bed", "Food", "Window"];
+
+  // Stack the data
+  const stack = d3.stack().keys(keys).offset(d3.stackOffsetExpand); // Normalize to 100%
+
+  const series = stack(hourlyData);
+
+  const y = d3
+    .scaleBand()
+    .domain(hourlyData.map((d) => d.hour))
+    .rangeRound([margin.top, height - margin.bottom])
+    .padding(0.1);
+
+  const x = d3.scaleLinear().rangeRound([margin.left, width - margin.right]);
+
+  const color = d3
+    .scaleOrdinal()
+    .domain(keys)
+    .range(["#8a7b9f", "#b28f7e", "#6d948a"]);
+
+  const svg = d3
+    .select("#hourly-chart")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  svg
+    .append("g")
+    .selectAll("g")
+    .data(series)
+    .join("g")
+    .attr("fill", (d) => color(d.key))
+    .selectAll("rect")
+    .data((d) => d)
+    .join("rect")
+    .attr("y", (d) => y(d.data.hour))
+    .attr("x", (d) => x(d[0]))
+    .attr("width", (d) => x(d[1]) - x(d[0]))
+    .attr("height", y.bandwidth());
+
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${margin.top})`)
+    .call(d3.axisTop(x).ticks(5, "%"));
+
+  svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y));
 }
 
 setInterval(fetchCatData, 3000);
