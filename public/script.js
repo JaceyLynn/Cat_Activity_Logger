@@ -419,7 +419,7 @@ function drawPatternChart(sessionLog) {
     .datum(data)
     .attr("fill", "none")
     .attr("stroke", "#666") // Line color (dark grey)
-    .attr("stroke-width", 2)
+    .attr("stroke-width", 0.5)
     .attr("d", line);
 
   // Draw the dots
@@ -429,7 +429,7 @@ function drawPatternChart(sessionLog) {
     .join("circle")
     .attr("cx", d => x(d.timeOfDay))
     .attr("cy", d => y(d.location))
-    .attr("r", 5)
+    .attr("r", 3)
     .attr("fill", d => color(d.location));
 
   // X Axis
