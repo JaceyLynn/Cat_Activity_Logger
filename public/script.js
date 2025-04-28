@@ -28,69 +28,64 @@ async function fetchCatData() {
     let windowFrequency = 0;
     let foodFrequency = 0;
     // Initialize "previous meaningful state" separately for each event
-    let lastBedStatus = null;
-    let lastWindowStatus = null;
-    let lastFoodStatus = null;
+let sessionLog = [];
 
-    // Flags to monitor if we're waiting for a second "cat_detected"
-    let bedAwaitingSecondCat = false;
-    let windowAwaitingSecondCat = false;
-    let foodAwaitingSecondCat = false;
+let lastBedStatus = null;
+let lastWindowStatus = null;
+let lastFoodStatus = null;
 
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
+let bedSessionStart = null;
+let windowSessionStart = null;
+let foodSessionStart = null;
 
-      // --- Bed ---
-      if (row.event2) {
-        if (
-          lastBedStatus === "nothing_detected" &&
-          row.event2 === "cat_detected"
-        ) {
-          bedAwaitingSecondCat = true; // waiting for a second "cat_detected"
-        } else if (bedAwaitingSecondCat && row.event2 === "cat_detected") {
-          bedFrequency++; // now confirm the session
-          bedAwaitingSecondCat = false; // reset
-        } else if (bedAwaitingSecondCat && row.event2 === "nothing_detected") {
-          bedAwaitingSecondCat = false; // cat left immediately — no session
-        }
-        lastBedStatus = row.event2;
-      }
+for (let i = 0; i < data.length; i++) {
+  const row = data[i];
 
-      // --- Window ---
-      if (row.event1) {
-        if (
-          lastWindowStatus === "nothing_detected" &&
-          row.event1 === "cat_detected"
-        ) {
-          windowAwaitingSecondCat = true;
-        } else if (windowAwaitingSecondCat && row.event1 === "cat_detected") {
-          windowFrequency++;
-          windowAwaitingSecondCat = false;
-        } else if (
-          windowAwaitingSecondCat &&
-          row.event1 === "nothing_detected"
-        ) {
-          windowAwaitingSecondCat = false;
-        }
-        lastWindowStatus = row.event1;
-      }
+  const currentTime = row.local_timestamp; // assumed formatted correctly
 
-      // --- Food Bowl ---
-      if (row.event3) {
-        if (
-          lastFoodStatus === "nothing_detected" &&
-          row.event3 === "cat_detected"
-        ) {
-          foodAwaitingSecondCat = true;
-        } else if (foodAwaitingSecondCat && row.event3 === "cat_detected") {
-          foodFrequency++;
-          foodAwaitingSecondCat = false;
-        } else if (foodAwaitingSecondCat && row.event3 === "nothing_detected") {
-          foodAwaitingSecondCat = false;
-        }
-        lastFoodStatus = row.event3;
-      }
+  // --- Bed ---
+  if (row.event2) {
+    if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
+      bedSessionStart = currentTime;
+    } else if (lastBedStatus === "cat_detected" && row.event2 === "nothing_detected" && bedSessionStart) {
+      const start = new Date(bedSessionStart);
+      const end = new Date(currentTime);
+      const durationSec = Math.round((end - start) / 1000);
+      sessionLog.push({ startTime: bedSessionStart, durationSeconds: durationSec, location: "Bed" });
+      bedSessionStart = null;
     }
+    lastBedStatus = row.event2;
+  }
+
+  // --- Window ---
+  if (row.event1) {
+    if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
+      windowSessionStart = currentTime;
+    } else if (lastWindowStatus === "cat_detected" && row.event1 === "nothing_detected" && windowSessionStart) {
+      const start = new Date(windowSessionStart);
+      const end = new Date(currentTime);
+      const durationSec = Math.round((end - start) / 1000);
+      sessionLog.push({ startTime: windowSessionStart, durationSeconds: durationSec, location: "Window" });
+      windowSessionStart = null;
+    }
+    lastWindowStatus = row.event1;
+  }
+
+  // --- Food Bowl ---
+  if (row.event3) {
+    if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
+      foodSessionStart = currentTime;
+    } else if (lastFoodStatus === "cat_detected" && row.event3 === "nothing_detected" && foodSessionStart) {
+      const start = new Date(foodSessionStart);
+      const end = new Date(currentTime);
+      const durationSec = Math.round((end - start) / 1000);
+      sessionLog.push({ startTime: foodSessionStart, durationSeconds: durationSec, location: "Food" });
+      foodSessionStart = null;
+    }
+    lastFoodStatus = row.event3;
+  }
+}
+
 
     updateUI(
       latest,
@@ -99,7 +94,8 @@ async function fetchCatData() {
       foodDurationSeconds,
       bedFrequency,
       windowFrequency,
-      foodFrequency
+      foodFrequency,
+      sessionLog
     );
   } catch (err) {
     console.error("Error fetching cat data:", err);
@@ -113,7 +109,8 @@ function updateUI(
   foodDurationSeconds,
   bedFrequency,
   windowFrequency,
-  foodFrequency
+  foodFrequency,
+   sessionLog
 ) {
   const catBed = document.getElementById("cat-bed");
   const windowSpot = document.getElementById("window");
@@ -167,6 +164,61 @@ function updateBoxText(box, isActive, durationSeconds, frequency, label) {
     ${frequency}
   `;
 }
+
+
+function drawSessionChart(sessionLog) {
+  d3.select("#session-chart").html(""); // Clear previous chart if needed
+
+  const width = 600;
+  const height = 300;
+  const margin = { top: 20, right: 30, bottom: 30, left: 50 };
+
+  const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
+
+  const data = sessionLog.map(d => ({
+    startTime: parseTime(d.startTime),
+    durationSeconds: d.durationSeconds,
+    location: d.location
+  }));
+
+  // X: start time scale
+  const x = d3.scaleTime()
+    .domain(d3.extent(data, d => d.startTime))
+    .range([margin.left, width - margin.right]);
+
+  // Y: session duration
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(data, d => d.durationSeconds)]).nice()
+    .range([height - margin.bottom, margin.top]);
+
+  const shape = d3.scaleOrdinal()
+    .domain(["Bed", "Window", "Food"])
+    .range([d3.symbolCircle, d3.symbolSquare, d3.symbolTriangle]);
+
+  const svg = d3.select("#session-chart")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  svg.append("g")
+    .selectAll("path")
+    .data(data)
+    .join("path")
+    .attr("transform", d => `translate(${x(d.startTime)},${y(d.durationSeconds)})`)
+    .attr("d", d3.symbol().type(d => shape(d.location)).size(100))
+    .attr("fill", "black");
+
+  // X axis (time)
+  svg.append("g")
+    .attr("transform", `translate(0,${height - margin.bottom})`)
+    .call(d3.axisBottom(x).ticks(width / 80).tickSizeOuter(0));
+
+  // Y axis (duration)
+  svg.append("g")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y).ticks(5));
+}
+
 
 setInterval(fetchCatData, 3000);
 fetchCatData();
