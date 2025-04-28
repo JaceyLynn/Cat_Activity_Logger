@@ -28,64 +28,96 @@ async function fetchCatData() {
     let windowFrequency = 0;
     let foodFrequency = 0;
     // Initialize "previous meaningful state" separately for each event
-let sessionLog = [];
+    let sessionLog = [];
 
-let lastBedStatus = null;
-let lastWindowStatus = null;
-let lastFoodStatus = null;
+    let lastBedStatus = null;
+    let lastWindowStatus = null;
+    let lastFoodStatus = null;
 
-let bedSessionStart = null;
-let windowSessionStart = null;
-let foodSessionStart = null;
+    let bedSessionStart = null;
+    let windowSessionStart = null;
+    let foodSessionStart = null;
 
-for (let i = 0; i < data.length; i++) {
-  const row = data[i];
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
 
-  const currentTime = row.local_timestamp; // assumed formatted correctly
+      const currentTime = row.local_timestamp; // assumed formatted correctly
 
-  // --- Bed ---
-  if (row.event2) {
-    if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
-      bedSessionStart = currentTime;
-    } else if (lastBedStatus === "cat_detected" && row.event2 === "nothing_detected" && bedSessionStart) {
-      const start = new Date(bedSessionStart);
-      const end = new Date(currentTime);
-      const durationSec = Math.round((end - start) / 1000);
-      sessionLog.push({ startTime: bedSessionStart, durationSeconds: durationSec, location: "Bed" });
-      bedSessionStart = null;
+      // --- Bed ---
+      if (row.event2) {
+        if (
+          lastBedStatus === "nothing_detected" &&
+          row.event2 === "cat_detected"
+        ) {
+          bedSessionStart = currentTime;
+        } else if (
+          lastBedStatus === "cat_detected" &&
+          row.event2 === "nothing_detected" &&
+          bedSessionStart
+        ) {
+          const start = new Date(bedSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          sessionLog.push({
+            startTime: bedSessionStart,
+            durationSeconds: durationSec,
+            location: "Bed",
+          });
+          bedSessionStart = null;
+        }
+        lastBedStatus = row.event2;
+      }
+
+      // --- Window ---
+      if (row.event1) {
+        if (
+          lastWindowStatus === "nothing_detected" &&
+          row.event1 === "cat_detected"
+        ) {
+          windowSessionStart = currentTime;
+        } else if (
+          lastWindowStatus === "cat_detected" &&
+          row.event1 === "nothing_detected" &&
+          windowSessionStart
+        ) {
+          const start = new Date(windowSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          sessionLog.push({
+            startTime: windowSessionStart,
+            durationSeconds: durationSec,
+            location: "Window",
+          });
+          windowSessionStart = null;
+        }
+        lastWindowStatus = row.event1;
+      }
+
+      // --- Food Bowl ---
+      if (row.event3) {
+        if (
+          lastFoodStatus === "nothing_detected" &&
+          row.event3 === "cat_detected"
+        ) {
+          foodSessionStart = currentTime;
+        } else if (
+          lastFoodStatus === "cat_detected" &&
+          row.event3 === "nothing_detected" &&
+          foodSessionStart
+        ) {
+          const start = new Date(foodSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          sessionLog.push({
+            startTime: foodSessionStart,
+            durationSeconds: durationSec,
+            location: "Food",
+          });
+          foodSessionStart = null;
+        }
+        lastFoodStatus = row.event3;
+      }
     }
-    lastBedStatus = row.event2;
-  }
-
-  // --- Window ---
-  if (row.event1) {
-    if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
-      windowSessionStart = currentTime;
-    } else if (lastWindowStatus === "cat_detected" && row.event1 === "nothing_detected" && windowSessionStart) {
-      const start = new Date(windowSessionStart);
-      const end = new Date(currentTime);
-      const durationSec = Math.round((end - start) / 1000);
-      sessionLog.push({ startTime: windowSessionStart, durationSeconds: durationSec, location: "Window" });
-      windowSessionStart = null;
-    }
-    lastWindowStatus = row.event1;
-  }
-
-  // --- Food Bowl ---
-  if (row.event3) {
-    if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
-      foodSessionStart = currentTime;
-    } else if (lastFoodStatus === "cat_detected" && row.event3 === "nothing_detected" && foodSessionStart) {
-      const start = new Date(foodSessionStart);
-      const end = new Date(currentTime);
-      const durationSec = Math.round((end - start) / 1000);
-      sessionLog.push({ startTime: foodSessionStart, durationSeconds: durationSec, location: "Food" });
-      foodSessionStart = null;
-    }
-    lastFoodStatus = row.event3;
-  }
-}
-
 
     updateUI(
       latest,
@@ -147,6 +179,7 @@ function updateUI(
     foodFrequency,
     "Food Bowl"
   );
+  drawSessionChart(sessionLog);
 }
 
 function updateBoxText(box, isActive, durationSeconds, frequency, label) {
@@ -165,7 +198,6 @@ function updateBoxText(box, isActive, durationSeconds, frequency, label) {
   `;
 }
 
-
 function drawSessionChart(sessionLog) {
   d3.select("#session-chart").html(""); // Clear previous chart if needed
 
@@ -175,50 +207,77 @@ function drawSessionChart(sessionLog) {
 
   const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-  const data = sessionLog.map(d => ({
+  const data = sessionLog.map((d) => ({
     startTime: parseTime(d.startTime),
     durationSeconds: d.durationSeconds,
-    location: d.location
+    location: d.location,
   }));
 
   // X: start time scale
-  const x = d3.scaleTime()
-    .domain(d3.extent(data, d => d.startTime))
+  const x = d3
+    .scaleTime()
+    .domain(d3.extent(data, (d) => d.startTime))
     .range([margin.left, width - margin.right]);
 
   // Y: session duration
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d.durationSeconds)]).nice()
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(data, (d) => d.durationSeconds)])
+    .nice()
     .range([height - margin.bottom, margin.top]);
 
-  const shape = d3.scaleOrdinal()
-    .domain(["Bed", "Window", "Food"])
-    .range([d3.symbolCircle, d3.symbolSquare, d3.symbolTriangle]);
+  const shape = d3
+    .scaleOrdinal()
+    .domain(["Bed", "Food", "Window"])
+    .range([d3.symbolCircle, d3.symbolTriangle, d3.symbolSquare]);
 
-  const svg = d3.select("#session-chart")
+  const color = d3
+    .scaleOrdinal()
+    .domain(["Bed", "Food", "Window"])
+    .range(["#8a7b9f", "#b28f7e", "#6d948a"]);
+
+  const svg = d3
+    .select("#session-chart")
     .append("svg")
     .attr("width", width)
     .attr("height", height);
 
-  svg.append("g")
+  // Draw points
+  svg
+    .append("g")
     .selectAll("path")
     .data(data)
     .join("path")
-    .attr("transform", d => `translate(${x(d.startTime)},${y(d.durationSeconds)})`)
-    .attr("d", d3.symbol().type(d => shape(d.location)).size(100))
-    .attr("fill", "black");
+    .attr(
+      "transform",
+      (d) => `translate(${x(d.startTime)},${y(d.durationSeconds)})`
+    )
+    .attr(
+      "d",
+      d3
+        .symbol()
+        .type((d) => shape(d.location))
+        .size(100)
+    )
+    .attr("fill", (d) => color(d.location)); // ✨ color based on location
 
   // X axis (time)
-  svg.append("g")
+  svg
+    .append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x).ticks(width / 80).tickSizeOuter(0));
+    .call(
+      d3
+        .axisBottom(x)
+        .ticks(width / 80)
+        .tickSizeOuter(0)
+    );
 
   // Y axis (duration)
-  svg.append("g")
+  svg
+    .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y).ticks(5));
 }
-
 
 setInterval(fetchCatData, 3000);
 fetchCatData();
