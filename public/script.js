@@ -1,7 +1,6 @@
 const WEB_APP_URL =
   "https://script.google.com/macros/s/AKfycbzfe0g5mZ2kn57Pw4mW_yb1-DNwAh4FHuUVbXMMISh-alx98LbghIj7mB-pXz36_l-yZg/exec";
 
-
 async function fetchCatData() {
   try {
     const res = await fetch("/catdata");
@@ -15,71 +14,59 @@ async function fetchCatData() {
     const latest = data[data.length - 1];
 
     // Duration counts
-    const bedDurationSeconds = data.filter(row => row.event2 === "cat_detected").length;
-    const windowDurationSeconds = data.filter(row => row.event1 === "cat_detected").length;
-    const foodDurationSeconds = data.filter(row => row.event3 === "cat_detected").length;
+    const bedDurationSeconds = data.filter(
+      (row) => row.event2 === "cat_detected"
+    ).length;
+    const windowDurationSeconds = data.filter(
+      (row) => row.event1 === "cat_detected"
+    ).length;
+    const foodDurationSeconds = data.filter(
+      (row) => row.event3 === "cat_detected"
+    ).length;
 
     // Initialize "previous meaningful state" separately for each event
-let lastBedStatus = null;
-let lastWindowStatus = null;
-let lastFoodStatus = null;
-    
-        let bedFrequency = 0;
-    let windowFrequency = 0;
-    let foodFrequency = 0;
+    let lastBedStatus = null;
+    let lastWindowStatus = null;
+    let lastFoodStatus = null;
 
-for (let i = 0; i < data.length; i++) {
-  const row = data[i];
-
-  // Bed transitions
-  if (row.event2) {
-    if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
-      bedFrequency++;
-    }
-    lastBedStatus = row.event2; // Update memory if not blank
-  }
-
-  // Window transitions
-  if (row.event1) {
-    if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
-      windowFrequency++;
-    }
-    lastWindowStatus = row.event1;
-  }
-
-  // Food transitions
-  if (row.event3) {
-    if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
-      foodFrequency++;
-    }
-    lastFoodStatus = row.event3;
-  }
-}
-
-    
-    // Frequency (transitions) counts, ignoring blanks
     let bedFrequency = 0;
     let windowFrequency = 0;
     let foodFrequency = 0;
 
-    for (let i = 1; i < data.length; i++) {
-      // Bed
-      if (data[i - 1].event2 && data[i].event2) { // both not null
-        if (data[i - 1].event2 === "nothing_detected" && data[i].event2 === "cat_detected") {
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+
+      // Bed transitions
+      if (row.event2) {
+        if (
+          lastBedStatus === "nothing_detected" &&
+          row.event2 === "cat_detected"
+        ) {
           bedFrequency++;
         }
+        lastBedStatus = row.event2; // Update memory if not blank
       }
-      // Window
-      if (data[i - 1].event1 && data[i].event1) {
-        if (data[i - 1].event1 === "nothing_detected" && data[i].event1 === "cat_detected") {
+
+      // Window transitions
+      if (row.event1) {
+        if (
+          lastWindowStatus === "nothing_detected" &&
+          row.event1 === "cat_detected"
+        ) {
           windowFrequency++;
         }
+        lastWindowStatus = row.event1;
       }
-      // Food Bowl
-      if (data[i - 1].event3 && data[i].event3) {
-        if (data[i - 1].event3 === "nothing_detected" && data[i].event3 === "cat_detected") {
+
+      // Food transitions
+      if (row.event3) {
+        if (
+          lastFoodStatus === "nothing_detected" &&
+          row.event3 === "cat_detected"
+        ) {
           foodFrequency++;
         }
+        lastFoodStatus = row.event3;
       }
     }
 
@@ -96,7 +83,6 @@ for (let i = 0; i < data.length; i++) {
     console.error("Error fetching cat data:", err);
   }
 }
-
 
 function updateUI(
   latest,
