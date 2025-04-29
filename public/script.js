@@ -2,6 +2,7 @@
 //   "https://script.google.com/macros/s/AKfycbxn9-kXI1Vsmi_SvtI5M52terMvXbNspXr8HHrFdVRfxBTofhsmB6uXpT_wClNc9sNW-g/exec";
 
 let currentSessionLog = [];
+let isUserSwitchingDate = false;
 
 async function populateDateFilter() {
   try {
@@ -29,6 +30,10 @@ async function populateDateFilter() {
 async function fetchCatData() {
   
   try {
+      if (isUserSwitchingDate) {
+      console.log("[fetchCatDataDefault] Cancelled because user switched date");
+      return; //Stop fetching today's data if user switched
+    }
     console.log("[fetchCatDataDefault] I am fetching default sheet (no specific date)");
 
     const res = await fetch("/catdata");
@@ -166,6 +171,7 @@ async function fetchCatData() {
 document.getElementById("date-filter").addEventListener("change", (e) => {
   const selectedDate = e.target.value;
   if (selectedDate) {
+    isUserSwitchingDate = true; // Block further default fetching
     fetchChartDataOnly(selectedDate);
   }
 });
@@ -339,13 +345,13 @@ const cleanedData = data.filter(d => d.startTime && d.durationSeconds !== undefi
   // X: start time scale
   const x = d3
     .scaleTime()
-    .domain(d3.extent(data, (d) => d.startTime))
+    .domain(d3.extent(cleanedData, (d) => d.startTime))
     .range([margin.left, width - margin.right]);
 
   // Y: session duration
   const y = d3
     .scaleLinear()
-    .domain([0, d3.max(data, (d) => d.durationSeconds)])
+    .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
     .nice()
     .range([height - margin.bottom, margin.top]);
 
