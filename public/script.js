@@ -588,7 +588,7 @@ const cleanedData = data.filter(d => d.timeOfDay && d.location);
 
 // Draw the connecting line with animation
 const path = svg.append("path")
-  .datum(cleanedData)
+  .datum(data)
   .attr("fill", "none")
   .attr("stroke", "#666") // Line color
   .attr("stroke-width", 2)
@@ -609,7 +609,7 @@ path
   // Draw the dots
   svg.append("g")
     .selectAll("circle")
-    .data(cleanedData)
+    .data(data)
     .join("circle")
     .attr("cx", d => x(d.timeOfDay))
     .attr("cy", d => y(d.location))
