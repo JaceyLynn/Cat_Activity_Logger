@@ -27,7 +27,10 @@ async function populateDateFilter() {
 }
 
 async function fetchCatData() {
+  
   try {
+    console.log("[fetchCatDataDefault] I am fetching default sheet (no specific date)");
+
     const res = await fetch("/catdata");
     const data = await res.json();
 
@@ -203,6 +206,7 @@ async function fetchChartDataOnly(selectedDate) {
 
     // Redraw charts
     updateCharts(currentSessionLog);
+console.log("[fetchCatDataOnly] I am fetching sheet:", selectedDate);
 
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
