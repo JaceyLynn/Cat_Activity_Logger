@@ -174,34 +174,32 @@ async function fetchChartDataOnly(date) {
       return;
     }
 
-    // Prepare sessionLog just like before
     let sessionLog = [];
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
     data.forEach(row => {
       if (row.event1 === "cat_detected" || row.event2 === "cat_detected" || row.event3 === "cat_detected") {
-        const startTime = row.local_timestamp;
         let location = "";
         if (row.event2 === "cat_detected") location = "Bed";
         else if (row.event3 === "cat_detected") location = "Food";
         else if (row.event1 === "cat_detected") location = "Window";
 
         sessionLog.push({
-          startTime,
+          startTime: row.local_timestamp,
           location
         });
       }
     });
 
-    // Redraw only the two charts
+    // 🛠 Rebuild charts
     const hourlyData = prepareHourlySummary(sessionLog);
     drawHourlyChart(hourlyData);
 
     drawPatternChart(sessionLog);
 
   } catch (err) {
-    console.error("Error fetching chart data:", err);
+    console.error("Error fetching selected date data:", err);
   }
 }
 
