@@ -13,16 +13,16 @@ app.use(express.static("public")); // Serve static files from the 'public' folde
 // Proxy endpoint
 app.get("/catdata", async (req, res) => {
   try {
-    const urlParams = new URLSearchParams(req.query).toString();
-    const finalUrl = `${GOOGLE_SCRIPT_URL}?${urlParams}`;
+    const params = new URLSearchParams(req.query).toString(); // Capture all incoming query params
+    const finalUrl = `${GOOGLE_SCRIPT_URL}?${params}`; // Forward the params to Apps Script
 
     const response = await fetch(finalUrl);
     const data = await response.json();
 
     res.json(data);
   } catch (err) {
-    console.error("Error proxying catdata:", err);
-    res.status(500).json({ error: "Failed to proxy catdata" });
+    console.error("Proxy error:", err);
+    res.status(500).json({ error: "Proxy failed" });
   }
 });
 

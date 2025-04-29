@@ -167,18 +167,20 @@ document.getElementById("date-filter").addEventListener("change", (e) => {
   }
 });
 
-async function fetchChartDataOnly(date) {
+async function fetchChartDataOnly(selectedDate) {
   try {
-    const res = await fetch(`/catdata?sheet=${date}`);
-    const data = await res.json();
+    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
+    const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
-      console.warn("No data found for this date.");
+      console.warn("No data found for the selected day.");
       return;
     }
 
-    // 🛠 CLEAR old session log and rebuild it
-    currentSessionLog = [];
+    console.log("Fetched data for:", selectedDate, data);
+
+    // 🛠 Rebuild sessionLog cleanly
+    currentSessionLog = []; 
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
@@ -191,27 +193,29 @@ async function fetchChartDataOnly(date) {
 
         currentSessionLog.push({
           startTime: row.local_timestamp,
-          location
+          location: location,
+          durationSeconds: row.durationSeconds ?? 0 // optional fallback
         });
       }
     });
 
-    console.log("Updated sessionLog for selected date:", currentSessionLog);
+    console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
-    // 🛠 Reuse your existing chart drawing functions
+    // Redraw charts
     updateCharts(currentSessionLog);
 
   } catch (err) {
-    console.error("Error fetching selected date data:", err);
+    console.error("Error fetching data for selected day:", err);
   }
 }
 
-function updateCharts(sessionLog) {
-  drawSessionChart(sessionLog);
-  const hourlyData = prepareHourlySummary(sessionLog);
+
+function updateCharts(currentSessionLog) {
+  drawSessionChart(currentSessionLog);
+  const hourlyData = prepareHourlySummary(currentSessionLog);
   drawHourlyChart(hourlyData);
 
-  drawPatternChart(sessionLog);
+  drawPatternChart(currentSessionLog);
 }
 
 
