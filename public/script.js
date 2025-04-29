@@ -62,7 +62,7 @@ async function fetchCatData() {
     let foodFrequency = 0;
     // data for charts making, sessions info
     let sessionLog = [];
-    // Initialize "previous meaningful state" separately for each event
+    // Initialize previous meaningful state separately for each event
     let lastBedStatus = null;
     let lastWindowStatus = null;
     let lastFoodStatus = null;
@@ -580,7 +580,7 @@ const cleanedData = data.filter(d => d.timeOfDay && d.location);
     .attr("width", width)
     .attr("height", height);
 
-  // 🧵 Line generator (connect points)
+  // Line generator (connect points)
   const line = d3.line()
     .x(d => x(d.timeOfDay))
     .y(d => y(d.location))
