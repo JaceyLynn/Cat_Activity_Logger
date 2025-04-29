@@ -188,36 +188,73 @@ async function fetchChartDataOnly(selectedDate) {
 
     console.log("Fetched data for:", selectedDate, data);
 
-    // 🛠 Rebuild sessionLog cleanly
-    currentSessionLog = []; 
+    currentSessionLog = [];
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-    data.forEach(row => {
-      if (row.event1 === "cat_detected" || row.event2 === "cat_detected" || row.event3 === "cat_detected") {
-        let location = "";
-        if (row.event2 === "cat_detected") location = "Bed";
-        else if (row.event3 === "cat_detected") location = "Food";
-        else if (row.event1 === "cat_detected") location = "Window";
+    let sessionStart = null;
+    let sessionLocation = null;
+    let sessionLength = 0;
+    const samplingIntervalSec = 3; // <– Adjust this if your Arduino sample rate is different
 
-        currentSessionLog.push({
-          startTime: row.local_timestamp,
-          location: location,
-          durationSeconds: row.durationSeconds ?? 0 // optional fallback
-        });
+    data.forEach((row, idx) => {
+      const event1 = row.event1;
+      const event2 = row.event2;
+      const event3 = row.event3;
+      const timestamp = row.local_timestamp;
+
+      let location = "";
+      if (event2 === "cat_detected") location = "Bed";
+      else if (event3 === "cat_detected") location = "Food";
+      else if (event1 === "cat_detected") location = "Window";
+
+      if (location) {
+        if (!sessionStart) {
+          // Starting a new session
+          sessionStart = timestamp;
+          sessionLocation = location;
+          sessionLength = 1;
+        } else {
+          // Continuing same session
+          sessionLength++;
+        }
+      } else {
+        // nothing_detected
+        if (sessionStart && sessionLocation) {
+          // Save the finished session
+          currentSessionLog.push({
+            startTime: sessionStart,
+            location: sessionLocation,
+            durationSeconds: sessionLength * samplingIntervalSec
+          });
+
+          sessionStart = null;
+          sessionLocation = null;
+          sessionLength = 0;
+        }
       }
     });
+
+    // Handle if the day ends while a session is still happening
+    if (sessionStart && sessionLocation) {
+      currentSessionLog.push({
+        startTime: sessionStart,
+        location: sessionLocation,
+        durationSeconds: sessionLength * samplingIntervalSec
+      });
+    }
 
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
     // Redraw charts
     updateCharts(currentSessionLog);
-console.log("[fetchCatDataOnly] I am fetching sheet:", selectedDate);
 
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
   }
 }
+
+
 
 
 function updateCharts(currentSessionLog) {
@@ -345,13 +382,13 @@ const cleanedData = data.filter(d => d.startTime && d.durationSeconds !== undefi
   // X: start time scale
   const x = d3
     .scaleTime()
-    .domain(d3.extent(cleanedData, (d) => d.startTime))
+    .domain(d3.extent(data, (d) => d.startTime))
     .range([margin.left, width - margin.right]);
 
   // Y: session duration
   const y = d3
     .scaleLinear()
-    .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
+    .domain([0, d3.max(data, (d) => d.durationSeconds)])
     .nice()
     .range([height - margin.bottom, margin.top]);
 
@@ -375,7 +412,7 @@ const cleanedData = data.filter(d => d.startTime && d.durationSeconds !== undefi
   svg
     .append("g")
     .selectAll("path")
-    .data(cleanedData)
+    .data(data)
     .join("path")
     .attr(
       "transform",
