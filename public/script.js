@@ -1,5 +1,27 @@
 const WEB_APP_URL =
   "https://script.google.com/macros/s/AKfycbzfe0g5mZ2kn57Pw4mW_yb1-DNwAh4FHuUVbXMMISh-alx98LbghIj7mB-pXz36_l-yZg/exec";
+async function populateDateFilter() {
+  try {
+    const res = await fetch("/catdata?mode=listSheets");
+    const dateTabs = await res.json();
+    
+    console.log("Fetched dateTabs:", dateTabs); // <-- THEN you can safely log
+    const select = document.getElementById("date-filter");
+
+    // Clear existing options
+    select.innerHTML = '<option value="">Select Date</option>';
+
+    dateTabs.sort().reverse(); // latest first
+    dateTabs.forEach(date => {
+      const option = document.createElement("option");
+      option.value = date;
+      option.textContent = date;
+      select.appendChild(option);
+    });
+  } catch (err) {
+    console.error("Error populating date filter:", err);
+  }
+}
 
 async function fetchCatData() {
   try {
@@ -134,6 +156,55 @@ async function fetchCatData() {
     console.error("Error fetching cat data:", err);
   }
 }
+
+document.getElementById("date-filter").addEventListener("change", (e) => {
+  const selectedDate = e.target.value;
+  if (selectedDate) {
+    fetchChartDataOnly(selectedDate);
+  }
+});
+
+async function fetchChartDataOnly(date) {
+  try {
+    const res = await fetch(`/catdata?sheet=${date}`);
+    const data = await res.json();
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.warn("No data found for this date.");
+      return;
+    }
+
+    // Prepare sessionLog just like before
+    let sessionLog = [];
+
+    const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
+
+    data.forEach(row => {
+      if (row.event1 === "cat_detected" || row.event2 === "cat_detected" || row.event3 === "cat_detected") {
+        const startTime = row.local_timestamp;
+        let location = "";
+        if (row.event2 === "cat_detected") location = "Bed";
+        else if (row.event3 === "cat_detected") location = "Food";
+        else if (row.event1 === "cat_detected") location = "Window";
+
+        sessionLog.push({
+          startTime,
+          location
+        });
+      }
+    });
+
+    // Redraw only the two charts
+    const hourlyData = prepareHourlySummary(sessionLog);
+    drawHourlyChart(hourlyData);
+
+    drawPatternChart(sessionLog);
+
+  } catch (err) {
+    console.error("Error fetching chart data:", err);
+  }
+}
+
 
 function prepareHourlySummary(sessionLog) {
   // Initialize hourly summary
@@ -464,3 +535,4 @@ path
 
 setInterval(fetchCatData, 3000);
 fetchCatData();
+populateDateFilter();
