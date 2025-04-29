@@ -190,58 +190,92 @@ async function fetchChartDataOnly(selectedDate) {
 
     currentSessionLog = [];
 
-    const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
+    let lastBedStatus = null;
+    let lastWindowStatus = null;
+    let lastFoodStatus = null;
 
-    let sessionStart = null;
-    let sessionLocation = null;
-    let sessionLength = 0;
-    const samplingIntervalSec = 3; // <– Adjust this if your Arduino sample rate is different
+    let bedSessionStart = null;
+    let windowSessionStart = null;
+    let foodSessionStart = null;
 
-    data.forEach((row, idx) => {
-      const event1 = row.event1;
-      const event2 = row.event2;
-      const event3 = row.event3;
-      const timestamp = row.local_timestamp;
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const currentTime = row.local_timestamp; // assumed to be readable string
 
-      let location = "";
-      if (event2 === "cat_detected") location = "Bed";
-      else if (event3 === "cat_detected") location = "Food";
-      else if (event1 === "cat_detected") location = "Window";
-
-      if (location) {
-        if (!sessionStart) {
-          // Starting a new session
-          sessionStart = timestamp;
-          sessionLocation = location;
-          sessionLength = 1;
-        } else {
-          // Continuing same session
-          sessionLength++;
-        }
-      } else {
-        // nothing_detected
-        if (sessionStart && sessionLocation) {
-          // Save the finished session
+      // --- Bed ---
+      if (row.event2) {
+        if (
+          lastBedStatus === "nothing_detected" &&
+          row.event2 === "cat_detected"
+        ) {
+          bedSessionStart = currentTime;
+        } else if (
+          lastBedStatus === "cat_detected" &&
+          row.event2 === "nothing_detected" &&
+          bedSessionStart
+        ) {
+          const start = new Date(bedSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
           currentSessionLog.push({
-            startTime: sessionStart,
-            location: sessionLocation,
-            durationSeconds: sessionLength * samplingIntervalSec
+            startTime: bedSessionStart,
+            durationSeconds: durationSec,
+            location: "Bed"
           });
-
-          sessionStart = null;
-          sessionLocation = null;
-          sessionLength = 0;
+          bedSessionStart = null;
         }
+        lastBedStatus = row.event2;
       }
-    });
 
-    // Handle if the day ends while a session is still happening
-    if (sessionStart && sessionLocation) {
-      currentSessionLog.push({
-        startTime: sessionStart,
-        location: sessionLocation,
-        durationSeconds: sessionLength * samplingIntervalSec
-      });
+      // --- Window ---
+      if (row.event1) {
+        if (
+          lastWindowStatus === "nothing_detected" &&
+          row.event1 === "cat_detected"
+        ) {
+          windowSessionStart = currentTime;
+        } else if (
+          lastWindowStatus === "cat_detected" &&
+          row.event1 === "nothing_detected" &&
+          windowSessionStart
+        ) {
+          const start = new Date(windowSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          currentSessionLog.push({
+            startTime: windowSessionStart,
+            durationSeconds: durationSec,
+            location: "Window"
+          });
+          windowSessionStart = null;
+        }
+        lastWindowStatus = row.event1;
+      }
+
+      // --- Food Bowl ---
+      if (row.event3) {
+        if (
+          lastFoodStatus === "nothing_detected" &&
+          row.event3 === "cat_detected"
+        ) {
+          foodSessionStart = currentTime;
+        } else if (
+          lastFoodStatus === "cat_detected" &&
+          row.event3 === "nothing_detected" &&
+          foodSessionStart
+        ) {
+          const start = new Date(foodSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          currentSessionLog.push({
+            startTime: foodSessionStart,
+            durationSeconds: durationSec,
+            location: "Food"
+          });
+          foodSessionStart = null;
+        }
+        lastFoodStatus = row.event3;
+      }
     }
 
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
@@ -250,19 +284,19 @@ async function fetchChartDataOnly(selectedDate) {
     updateCharts(currentSessionLog);
 
   } catch (err) {
-    console.error("Error fetching data for selected day:", err);
+    console.error("Error fetching cat data:", err);
   }
 }
 
 
 
 
+
 function updateCharts(currentSessionLog) {
-  drawSessionChart(currentSessionLog);
+  drawSessionChart(currentSessionLog); 
   const hourlyData = prepareHourlySummary(currentSessionLog);
   drawHourlyChart(hourlyData);
-
-  drawPatternChart(currentSessionLog);
+  drawPatternChart(currentSessionLog); 
 }
 
 
