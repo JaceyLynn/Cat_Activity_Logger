@@ -326,6 +326,7 @@ function drawSessionChart(sessionLog) {
     durationSeconds: d.durationSeconds,
     location: d.location,
   }));
+const cleanedData = data.filter(d => d.startTime && d.durationSeconds !== undefined && d.location);
 
   // X: start time scale
   const x = d3
@@ -360,7 +361,7 @@ function drawSessionChart(sessionLog) {
   svg
     .append("g")
     .selectAll("path")
-    .data(data)
+    .data(cleanedData)
     .join("path")
     .attr(
       "transform",
@@ -469,6 +470,7 @@ function drawPatternChart(sessionLog) {
       location: d.location
     };
   });
+const cleanedData = data.filter(d => d.timeOfDay && d.location);
 
   // Sort sessions by time (important for connecting)
   data.sort((a, b) => a.timeOfDay - b.timeOfDay);
@@ -501,7 +503,7 @@ function drawPatternChart(sessionLog) {
 
 // Draw the connecting line with animation
 const path = svg.append("path")
-  .datum(data)
+  .datum(cleanedData)
   .attr("fill", "none")
   .attr("stroke", "#666") // Line color
   .attr("stroke-width", 2)
@@ -522,7 +524,7 @@ path
   // Draw the dots
   svg.append("g")
     .selectAll("circle")
-    .data(data)
+    .data(cleanedData)
     .join("circle")
     .attr("cx", d => x(d.timeOfDay))
     .attr("cy", d => y(d.location))
