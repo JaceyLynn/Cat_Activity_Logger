@@ -1,5 +1,8 @@
-const WEB_APP_URL =
-  "https://script.google.com/macros/s/AKfycbxn9-kXI1Vsmi_SvtI5M52terMvXbNspXr8HHrFdVRfxBTofhsmB6uXpT_wClNc9sNW-g/exec";
+// const WEB_APP_URL =
+//   "https://script.google.com/macros/s/AKfycbxn9-kXI1Vsmi_SvtI5M52terMvXbNspXr8HHrFdVRfxBTofhsmB6uXpT_wClNc9sNW-g/exec";
+
+let currentSessionLog = [];
+
 async function populateDateFilter() {
   try {
     const res = await fetch("/catdata?mode=listSheets");
@@ -174,7 +177,8 @@ async function fetchChartDataOnly(date) {
       return;
     }
 
-    let sessionLog = [];
+    // 🛠 CLEAR old session log and rebuild it
+    currentSessionLog = [];
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
@@ -185,22 +189,29 @@ async function fetchChartDataOnly(date) {
         else if (row.event3 === "cat_detected") location = "Food";
         else if (row.event1 === "cat_detected") location = "Window";
 
-        sessionLog.push({
+        currentSessionLog.push({
           startTime: row.local_timestamp,
           location
         });
       }
     });
 
-    // 🛠 Rebuild charts
-    const hourlyData = prepareHourlySummary(sessionLog);
-    drawHourlyChart(hourlyData);
+    console.log("Updated sessionLog for selected date:", currentSessionLog);
 
-    drawPatternChart(sessionLog);
+    // 🛠 Reuse your existing chart drawing functions
+    updateCharts(currentSessionLog);
 
   } catch (err) {
     console.error("Error fetching selected date data:", err);
   }
+}
+
+function updateCharts(sessionLog) {
+  drawSessionChart(sessionLog);
+  const hourlyData = prepareHourlySummary(sessionLog);
+  drawHourlyChart(hourlyData);
+
+  drawPatternChart(sessionLog);
 }
 
 
