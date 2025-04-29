@@ -13,15 +13,18 @@ app.use(express.static("public")); // Serve static files from the 'public' folde
 // Proxy endpoint
 app.get("/catdata", async (req, res) => {
   try {
-    const params = new URLSearchParams(req.query).toString(); // Capture all incoming query params
-    const finalUrl = `${GOOGLE_SCRIPT_URL}?${params}`; // Forward the params to Apps Script
+    const params = new URLSearchParams(req.query).toString();
 
+    console.log("[Glitch] Incoming query params:", req.query);
+    console.log("[Glitch] Final URL to Apps Script:", `${GOOGLE_SCRIPT_URL}?${params}`);
+
+    const finalUrl = `${GOOGLE_SCRIPT_URL}?${params}`;
     const response = await fetch(finalUrl);
     const data = await response.json();
 
     res.json(data);
   } catch (err) {
-    console.error("Proxy error:", err);
+    console.error("[Glitch] Proxy error:", err);
     res.status(500).json({ error: "Proxy failed" });
   }
 });
