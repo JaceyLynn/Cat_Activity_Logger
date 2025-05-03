@@ -204,120 +204,102 @@ async function fetchChartDataOnly(selectedDate) {
   try {
     showLoading(); // 🔹 START
 
-    const response = await fetch(
-      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
-    );
+    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
     const data = await response.json();
-    try {
-      const response = await fetch(
-        `/catdata?sheet=${encodeURIComponent(selectedDate)}`
-      );
-      const data = await response.json();
 
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        console.warn("No data found for the selected day.");
-        return;
-      }
-
-      console.log("Fetched data for:", selectedDate, data);
-
-      currentSessionLog = [];
-
-      let lastBedStatus = null;
-      let lastWindowStatus = null;
-      let lastFoodStatus = null;
-
-      let bedSessionStart = null;
-      let windowSessionStart = null;
-      let foodSessionStart = null;
-
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        const currentTime = row.local_timestamp; // assumed to be readable string
-
-        // --- Bed ---
-        if (row.event2) {
-          if (
-            lastBedStatus === "nothing_detected" &&
-            row.event2 === "cat_detected"
-          ) {
-            bedSessionStart = currentTime;
-          } else if (
-            lastBedStatus === "cat_detected" &&
-            row.event2 === "nothing_detected" &&
-            bedSessionStart
-          ) {
-            const start = new Date(bedSessionStart);
-            const end = new Date(currentTime);
-            const durationSec = Math.round((end - start) / 1000);
-            currentSessionLog.push({
-              startTime: bedSessionStart,
-              durationSeconds: durationSec,
-              location: "Bed",
-            });
-            bedSessionStart = null;
-          }
-          lastBedStatus = row.event2;
-        }
-
-        // --- Window ---
-        if (row.event1) {
-          if (
-            lastWindowStatus === "nothing_detected" &&
-            row.event1 === "cat_detected"
-          ) {
-            windowSessionStart = currentTime;
-          } else if (
-            lastWindowStatus === "cat_detected" &&
-            row.event1 === "nothing_detected" &&
-            windowSessionStart
-          ) {
-            const start = new Date(windowSessionStart);
-            const end = new Date(currentTime);
-            const durationSec = Math.round((end - start) / 1000);
-            currentSessionLog.push({
-              startTime: windowSessionStart,
-              durationSeconds: durationSec,
-              location: "Window",
-            });
-            windowSessionStart = null;
-          }
-          lastWindowStatus = row.event1;
-        }
-
-        // --- Food Bowl ---
-        if (row.event3) {
-          if (
-            lastFoodStatus === "nothing_detected" &&
-            row.event3 === "cat_detected"
-          ) {
-            foodSessionStart = currentTime;
-          } else if (
-            lastFoodStatus === "cat_detected" &&
-            row.event3 === "nothing_detected" &&
-            foodSessionStart
-          ) {
-            const start = new Date(foodSessionStart);
-            const end = new Date(currentTime);
-            const durationSec = Math.round((end - start) / 1000);
-            currentSessionLog.push({
-              startTime: foodSessionStart,
-              durationSeconds: durationSec,
-              location: "Food",
-            });
-            foodSessionStart = null;
-          }
-          lastFoodStatus = row.event3;
-        }
-      }
-
-      console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
-
-      // Redraw charts
-      updateCharts(currentSessionLog);
-    } catch (err) {
-      console.error("Error fetching cat data:", err);
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.warn("No data found for the selected day.");
+      hideLoading();
+      return;
     }
+
+    console.log("Fetched data for:", selectedDate, data);
+
+    currentSessionLog = [];
+
+    let lastBedStatus = null;
+    let lastWindowStatus = null;
+    let lastFoodStatus = null;
+
+    let bedSessionStart = null;
+    let windowSessionStart = null;
+    let foodSessionStart = null;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const currentTime = row.local_timestamp;
+
+      // --- Bed ---
+      if (row.event2) {
+        if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
+          bedSessionStart = currentTime;
+        } else if (
+          lastBedStatus === "cat_detected" &&
+          row.event2 === "nothing_detected" &&
+          bedSessionStart
+        ) {
+          const start = new Date(bedSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          currentSessionLog.push({
+            startTime: bedSessionStart,
+            durationSeconds: durationSec,
+            location: "Bed",
+          });
+          bedSessionStart = null;
+        }
+        lastBedStatus = row.event2;
+      }
+
+      // --- Window ---
+      if (row.event1) {
+        if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
+          windowSessionStart = currentTime;
+        } else if (
+          lastWindowStatus === "cat_detected" &&
+          row.event1 === "nothing_detected" &&
+          windowSessionStart
+        ) {
+          const start = new Date(windowSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          currentSessionLog.push({
+            startTime: windowSessionStart,
+            durationSeconds: durationSec,
+            location: "Window",
+          });
+          windowSessionStart = null;
+        }
+        lastWindowStatus = row.event1;
+      }
+
+      // --- Food Bowl ---
+      if (row.event3) {
+        if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
+          foodSessionStart = currentTime;
+        } else if (
+          lastFoodStatus === "cat_detected" &&
+          row.event3 === "nothing_detected" &&
+          foodSessionStart
+        ) {
+          const start = new Date(foodSessionStart);
+          const end = new Date(currentTime);
+          const durationSec = Math.round((end - start) / 1000);
+          currentSessionLog.push({
+            startTime: foodSessionStart,
+            durationSeconds: durationSec,
+            location: "Food",
+          });
+          foodSessionStart = null;
+        }
+        lastFoodStatus = row.event3;
+      }
+    }
+
+    console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
+
+    // ✅ Only hide loading after ALL charts have been updated
+    updateCharts(currentSessionLog);
     hideLoading(); // 🔹 END
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
