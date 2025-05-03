@@ -3,6 +3,7 @@
 
 let currentSessionLog = [];
 let isUserSwitchingDate = false;
+let hasInitialLoadCompleted = false;
 
 async function populateDateFilter() {
   try {
@@ -41,15 +42,10 @@ function hideLoading() {
 }
 
 async function fetchCatData() {
-  // ✅ Abort if user is switching dates
-  if (isUserSwitchingDate) {
-    console.log("[fetchCatData] Skipped: user switched date");
-    return;
-  }
-
   try {
-    console.log("[fetchCatData] Fetching default sheet (today)");
-    showLoading(); // 🔹 Show loader
+    if (isUserSwitchingDate) return;
+
+    if (!hasInitialLoadCompleted) showLoading(); // only for first time
 
     const res = await fetch("/catdata");
     const data = await res.json();
@@ -62,9 +58,15 @@ async function fetchCatData() {
     const latest = data[data.length - 1];
 
     // ⏱ Duration counts
-    const bedDurationSeconds = data.filter(row => row.event2 === "cat_detected").length;
-    const windowDurationSeconds = data.filter(row => row.event1 === "cat_detected").length;
-    const foodDurationSeconds = data.filter(row => row.event3 === "cat_detected").length;
+    const bedDurationSeconds = data.filter(
+      (row) => row.event2 === "cat_detected"
+    ).length;
+    const windowDurationSeconds = data.filter(
+      (row) => row.event1 === "cat_detected"
+    ).length;
+    const foodDurationSeconds = data.filter(
+      (row) => row.event3 === "cat_detected"
+    ).length;
 
     let bedFrequency = 0;
     let windowFrequency = 0;
@@ -84,11 +86,24 @@ async function fetchCatData() {
 
       // Bed session detection
       if (row.event2) {
-        if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
+        if (
+          lastBedStatus === "nothing_detected" &&
+          row.event2 === "cat_detected"
+        ) {
           bedSessionStart = currentTime;
-        } else if (lastBedStatus === "cat_detected" && row.event2 === "nothing_detected" && bedSessionStart) {
-          const durationSec = Math.round((new Date(currentTime) - new Date(bedSessionStart)) / 1000);
-          sessionLog.push({ startTime: bedSessionStart, durationSeconds: durationSec, location: "Bed" });
+        } else if (
+          lastBedStatus === "cat_detected" &&
+          row.event2 === "nothing_detected" &&
+          bedSessionStart
+        ) {
+          const durationSec = Math.round(
+            (new Date(currentTime) - new Date(bedSessionStart)) / 1000
+          );
+          sessionLog.push({
+            startTime: bedSessionStart,
+            durationSeconds: durationSec,
+            location: "Bed",
+          });
           bedSessionStart = null;
         }
         lastBedStatus = row.event2;
@@ -96,11 +111,24 @@ async function fetchCatData() {
 
       // Window session detection
       if (row.event1) {
-        if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
+        if (
+          lastWindowStatus === "nothing_detected" &&
+          row.event1 === "cat_detected"
+        ) {
           windowSessionStart = currentTime;
-        } else if (lastWindowStatus === "cat_detected" && row.event1 === "nothing_detected" && windowSessionStart) {
-          const durationSec = Math.round((new Date(currentTime) - new Date(windowSessionStart)) / 1000);
-          sessionLog.push({ startTime: windowSessionStart, durationSeconds: durationSec, location: "Window" });
+        } else if (
+          lastWindowStatus === "cat_detected" &&
+          row.event1 === "nothing_detected" &&
+          windowSessionStart
+        ) {
+          const durationSec = Math.round(
+            (new Date(currentTime) - new Date(windowSessionStart)) / 1000
+          );
+          sessionLog.push({
+            startTime: windowSessionStart,
+            durationSeconds: durationSec,
+            location: "Window",
+          });
           windowSessionStart = null;
         }
         lastWindowStatus = row.event1;
@@ -108,11 +136,24 @@ async function fetchCatData() {
 
       // Food session detection
       if (row.event3) {
-        if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
+        if (
+          lastFoodStatus === "nothing_detected" &&
+          row.event3 === "cat_detected"
+        ) {
           foodSessionStart = currentTime;
-        } else if (lastFoodStatus === "cat_detected" && row.event3 === "nothing_detected" && foodSessionStart) {
-          const durationSec = Math.round((new Date(currentTime) - new Date(foodSessionStart)) / 1000);
-          sessionLog.push({ startTime: foodSessionStart, durationSeconds: durationSec, location: "Food" });
+        } else if (
+          lastFoodStatus === "cat_detected" &&
+          row.event3 === "nothing_detected" &&
+          foodSessionStart
+        ) {
+          const durationSec = Math.round(
+            (new Date(currentTime) - new Date(foodSessionStart)) / 1000
+          );
+          sessionLog.push({
+            startTime: foodSessionStart,
+            durationSeconds: durationSec,
+            location: "Food",
+          });
           foodSessionStart = null;
         }
         lastFoodStatus = row.event3;
@@ -130,24 +171,28 @@ async function fetchCatData() {
       sessionLog,
       data
     );
+
+    if (!hasInitialLoadCompleted) {
+      hideLoading();
+      hasInitialLoadCompleted = true;
+    }
   } catch (err) {
     console.error("Error fetching cat data:", err);
-  } finally {
-    hideLoading(); // 🔹 Always hide loader at the end
+    if (!hasInitialLoadCompleted) hideLoading();
   }
 }
 
-
 async function fetchChartDataOnly(selectedDate) {
+  showLoading(); // 🔹 START LOADING UI
   try {
-    showLoading(); // 🔹 START
-
-    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
+    const response = await fetch(
+      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
+    );
     const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       console.warn("No data found for the selected day.");
-      // hideLoading();
+      hideLoading(); // 🔚 hide loading if nothing found
       return;
     }
 
@@ -167,9 +212,12 @@ async function fetchChartDataOnly(selectedDate) {
       const row = data[i];
       const currentTime = row.local_timestamp;
 
-      // --- Bed ---
+      // --- Bed session ---
       if (row.event2) {
-        if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
+        if (
+          lastBedStatus === "nothing_detected" &&
+          row.event2 === "cat_detected"
+        ) {
           bedSessionStart = currentTime;
         } else if (
           lastBedStatus === "cat_detected" &&
@@ -189,9 +237,12 @@ async function fetchChartDataOnly(selectedDate) {
         lastBedStatus = row.event2;
       }
 
-      // --- Window ---
+      // --- Window session ---
       if (row.event1) {
-        if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
+        if (
+          lastWindowStatus === "nothing_detected" &&
+          row.event1 === "cat_detected"
+        ) {
           windowSessionStart = currentTime;
         } else if (
           lastWindowStatus === "cat_detected" &&
@@ -211,9 +262,12 @@ async function fetchChartDataOnly(selectedDate) {
         lastWindowStatus = row.event1;
       }
 
-      // --- Food Bowl ---
+      // --- Food session ---
       if (row.event3) {
-        if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
+        if (
+          lastFoodStatus === "nothing_detected" &&
+          row.event3 === "cat_detected"
+        ) {
           foodSessionStart = currentTime;
         } else if (
           lastFoodStatus === "cat_detected" &&
@@ -236,20 +290,19 @@ async function fetchChartDataOnly(selectedDate) {
 
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
-    // ✅ Only hide loading after ALL charts have been updated
-    updateCharts(currentSessionLog);
-    // hideLoading(); // 🔹 END
+    await updateCharts(currentSessionLog); // ✅ Await to ensure full rendering
+    hideLoading(); // 🔚 END after all rendering is done
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
-    hideLoading();
+    hideLoading(); // Hide on error too
   }
 }
 
-function updateCharts(currentSessionLog) {
-  drawSessionChart(currentSessionLog);
+async function updateCharts(currentSessionLog) {
+  await drawSessionChart(currentSessionLog); // ✅ make sure these are either async or handled with Promises
   const hourlyData = prepareHourlySummary(currentSessionLog);
-  drawHourlyChart(hourlyData);
-  drawPatternChart(currentSessionLog);
+  await drawHourlyChart(hourlyData);
+  await drawPatternChart(currentSessionLog);
 }
 
 function prepareHourlySummary(sessionLog) {
