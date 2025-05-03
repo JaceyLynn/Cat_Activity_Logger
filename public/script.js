@@ -238,7 +238,7 @@ async function fetchChartDataOnly(selectedDate) {
 
     // ✅ Only hide loading after ALL charts have been updated
     updateCharts(currentSessionLog);
-    hideLoading(); // 🔹 END
+    // hideLoading(); // 🔹 END
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
     hideLoading();
@@ -444,6 +444,7 @@ function drawSessionChart(sessionLog) {
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y).ticks(5));
+  hideLoading();
 }
 
 function drawHourlyChart(hourlyData) {
@@ -502,6 +503,7 @@ function drawHourlyChart(hourlyData) {
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y));
+  hideLoading();
 }
 
 function drawPatternChart(sessionLog) {
@@ -611,6 +613,7 @@ function drawPatternChart(sessionLog) {
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y));
+  hideLoading();
 }
 
 setInterval(fetchCatData, 3000);
