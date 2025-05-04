@@ -298,12 +298,15 @@ async function fetchChartDataOnly(selectedDate) {
 
 
 async function updateCharts(currentSessionLog) {
-  await drawSessionChart(currentSessionLog); // ✅ make sure these are either async or handled with Promises
+  drawSessionChart(currentSessionLog);
   const hourlyData = prepareHourlySummary(currentSessionLog);
-  await drawHourlyChart(hourlyData);
-  await drawPatternChart(currentSessionLog);
+  drawHourlyChart(hourlyData);
+  drawPatternChart(currentSessionLog);
   
+  // Wait 500ms to ensure rendering completes before hiding loading
+  await new Promise(resolve => setTimeout(resolve, 500));
 }
+
 
 function prepareHourlySummary(sessionLog) {
   // Initialize hourly summary
@@ -437,13 +440,13 @@ function drawSessionChart(sessionLog) {
     // X: start time scale
     const x = d3
       .scaleTime()
-      .domain(d3.extent(data, (d) => d.startTime))
+      .domain(d3.extent(cleanedData, (d) => d.startTime))
       .range([margin.left, width - margin.right]);
 
     // Y: session duration
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.durationSeconds)])
+      .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
       .nice()
       .range([height - margin.bottom, margin.top]);
 
@@ -467,7 +470,7 @@ function drawSessionChart(sessionLog) {
     svg
       .append("g")
       .selectAll("path")
-      .data(data)
+      .data(cleanedData)
       .join("path")
       .attr(
         "transform",
@@ -480,7 +483,7 @@ function drawSessionChart(sessionLog) {
           .type((d) => shape(d.location))
           .size(100)
       )
-      .attr("fill", (d) => color(d.location)); // ✨ color based on location
+      .attr("fill", (d) => color(d.location));
 
     // X axis (time)
     svg
@@ -498,9 +501,11 @@ function drawSessionChart(sessionLog) {
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y).ticks(5));
-    resolve();
+
+    resolve(); // ✅ Mark async work complete
   });
 }
+
 
 function drawHourlyChart(hourlyData) {
   return new Promise((resolve) => {
