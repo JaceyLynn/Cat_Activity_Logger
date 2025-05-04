@@ -546,12 +546,11 @@ function drawSessionChart(sessionLog) {
       .range([margin.left, width - margin.right]);
 
     // Y: session duration using log scale
-const y = d3
-  .scalePow()
-  .exponent(0.3) // sqrt-compression 0.3 ~ 0.7
-  .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
-  .range([height - margin.bottom, margin.top]);
-
+    const y = d3
+      .scalePow()
+      .exponent(0.3) // sqrt-compression 0.3 ~ 0.7
+      .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
+      .range([height - margin.bottom, margin.top]);
 
     const shape = d3
       .scaleOrdinal()
@@ -602,9 +601,15 @@ const y = d3
       );
 
     // Y axis (log scale, formatted)
- svg.append("g")
-  .attr("transform", `translate(${margin.left},0)`)
-  .call(d3.axisLeft(y).ticks(20).tickFormat(d => `${(d / 60).toFixed(1)} `));
+    svg
+      .append("g")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(
+        d3
+          .axisLeft(y)
+          .ticks(18)
+          .tickFormat((d) => `${(d / 60).toFixed(1)} `)
+      );
     // Y Axis label
     svg
       .append("text")
