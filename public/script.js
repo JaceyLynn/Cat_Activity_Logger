@@ -560,7 +560,7 @@ function drawSessionChart(sessionLog) {
     const color = d3
       .scaleOrdinal()
       .domain(["Bed", "Food", "Window"])
-      .range(["#8a7b9f", "#b28f7e", "#6d948a"]);
+      .range(["#D390CE", "#F5AB54", "#60D1DB"]);
 
     const svg = d3
       .select("#session-chart")
@@ -652,7 +652,7 @@ function drawHourlyChart(hourlyData) {
     const color = d3
       .scaleOrdinal()
       .domain(keys)
-      .range(["#8a7b9f", "#b28f7e", "#6d948a"]);
+      .range(["#D390CE", "#F5AB54", "#60D1DB"]);
 
     const svg = d3
       .select("#hourly-chart")
@@ -735,7 +735,7 @@ function drawPatternChart(sessionLog) {
     const color = d3
       .scaleOrdinal()
       .domain(["Bed", "Food", "Window"])
-      .range(["#8a7b9f", "#b28f7e", "#6d948a"]);
+      .range(["#D390CE", "#F5AB54", "#60D1DB"]);
 
     const svg = d3
       .select("#pattern-chart")
@@ -757,7 +757,7 @@ function drawPatternChart(sessionLog) {
       .datum(data)
       .attr("fill", "none")
       .attr("stroke", "#666") // Line color
-      .attr("stroke-width", 2)
+      .attr("stroke-width", 1)
       .attr("d", line);
 
     // Animate the path drawing

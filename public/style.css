@@ -1,5 +1,5 @@
-.petit-formal-script-regular {
-  font-family: "Petit Formal Script", cursive;
+.bonbon-regular {
+  font-family: "Bonbon", cursive;
   font-weight: 400;
   font-style: normal;
 }
@@ -58,6 +58,7 @@ body {
   background: #ffffff;
   padding: 24px 36px;
   border-radius: 16px;
+  font-family: "Bonbon", cursive;
   font-size: 1.5rem;
   font-weight: bold;
   text-align: center;
@@ -75,7 +76,7 @@ body {
 
 
 h1 {
-  font-family: "Petit Formal Script", cursive;
+  font-family: "Bonbon", cursive;
   font-size: 2.5rem;
   border-bottom: 1px solid #ccc;
   padding-bottom: 0.5rem;
@@ -99,11 +100,15 @@ h1 {
 }
 
 #cat-bed {
-  background: #8a7b9f;
+  background: #D390CE;
+}
+
+#food-bowl {
+  background: #F5AB54;
 }
 
 #window {
-  background: #6d948a;
+  background: #60D1DB;
 }
 
 .status-box.active {
