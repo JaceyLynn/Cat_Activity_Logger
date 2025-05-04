@@ -877,7 +877,7 @@ async function drawPeakChart(sessionLog) {
   d3.select("#peak-chart").html("");
   const container = document.getElementById("peak-chart");
   const width  = container.clientWidth || 800;
-  const height = 250;
+  const height = 220;
   const margin = { top: 40, right: 20, bottom: 60, left: 80 };
   const cellSize = (width - margin.left - margin.right) / 24;
 
@@ -890,7 +890,9 @@ async function drawPeakChart(sessionLog) {
     .range([margin.top, margin.top + locations.length*cellSize])
     .paddingInner(0.1);
   const maxVal = d3.max(heatmapData, d => d.value);
-  const color = d3.scaleSequential([0, maxVal], d3.interpolateYlGnBu);
+  const color = d3.scaleLinear()
+  .domain([0, maxVal])
+  .range(["#DED9D3", "#ee5a36"]);
 
   // 5) Create SVG
   const svg = d3.select("#peak-chart")
