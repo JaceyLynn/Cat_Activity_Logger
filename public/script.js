@@ -659,7 +659,7 @@ function drawHourlyChart(hourlyData) {
     const container = document.getElementById("session-chart");
     const width = container.clientWidth || 1000;
     const height = 600;
-    const margin = { top: 20, right: 30, bottom: 30, left: 50 };
+    const margin = { top: 20, right: 30, bottom: 80, left: 60 };
 
     const keys = ["Bed", "Food", "Window"];
 
@@ -711,6 +711,28 @@ function drawHourlyChart(hourlyData) {
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
+    
+    // ─── Legend ────────────────────────────────────────────────────────────────
+    const legend = svg.append("g")
+      .attr("transform", `translate(${margin.left},${height - margin.bottom + 40})`);
+
+    keys.forEach((key, i) => {
+      const x0 = i * 120;
+      // color box
+      legend.append("rect")
+        .attr("x", x0)
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", color(key));
+      // label
+      legend.append("text")
+        .attr("x", x0 + 18)
+        .attr("y", 10)
+        .text(key)
+        .style("font-size", "12px")
+        .attr("alignment-baseline", "middle");
+    });
+
     resolve();
   });
 }
@@ -722,7 +744,7 @@ function drawPatternChart(sessionLog) {
     const container = document.getElementById("session-chart");
     const width = container.clientWidth || 1000;
     const height = 200;
-    const margin = { top: 20, right: 30, bottom: 30, left: 80 };
+    const margin = { top: 20, right: 30, bottom: 80, left: 80 };
 
     // Parse times
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
@@ -826,6 +848,26 @@ function drawPatternChart(sessionLog) {
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
+    
+      // ─── Legend ────────────────────────────────────────────────────────────────
+    const legend = svg.append("g")
+      .attr("transform", `translate(${margin.left},${height - margin.bottom + 40})`);
+
+    keys.forEach((key, i) => {
+      const x0 = i * 140;
+      // shape
+      legend.append("path")
+        .attr("d", d3.symbol().type(shape(key)).size(80)())
+        .attr("transform", `translate(${x0},0)`)
+        .attr("fill", color(key));
+      // label
+      legend.append("text")
+        .attr("x", x0 + 12)
+        .attr("y", 4)
+        .text(key)
+        .style("font-size","12px")
+        .attr("alignment-baseline","middle");
+    });
     resolve();
   });
 }
