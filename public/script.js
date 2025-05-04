@@ -401,11 +401,10 @@ async function fetchChartDataOnly(selectedDate) {
 async function updateCharts(currentSessionLog) {
   // Wait for each chart to finish drawing before continuing
   await drawSessionChart(currentSessionLog);
-
   const hourlyData = prepareHourlySummary(currentSessionLog);
   await drawHourlyChart(hourlyData);
-
   await drawPatternChart(currentSessionLog);
+  await drawPeakChart(currentSessionLog); 
 }
 
 function prepareHourlySummary(sessionLog) {
@@ -502,6 +501,7 @@ function updateUI(
   const hourlyData = prepareHourlySummary(sessionLog);
   drawHourlyChart(hourlyData);
   drawPatternChart(sessionLog);
+  drawPeakChart(sessionLog); 
 }
 
 function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
@@ -850,15 +850,140 @@ function drawPatternChart(sessionLog) {
   });
 }
 
-// sessionLog: [{startTime: "…", durationSeconds:…, location:"Bed"},…]
-function computeHourlyTotals(sessionLog) {
-  const hours = Array.from({length:24},() => 0);
+async function drawPeakChart(sessionLog) {
+  // 1) Aggregate total duration per hour for each location
+  const locations = ["Bed","Window","Food"];
   const parse = d3.timeParse("%Y-%m-%d %H:%M:%S");
-  sessionLog.forEach(d => {
-    const h = parse(d.startTime).getHours();
-    hours[h] += d.durationSeconds;
+  const hourlyByLoc = {};
+  locations.forEach(loc => {
+    hourlyByLoc[loc] = Array.from({ length: 24 }, () => 0);
   });
-  return hours;
+  sessionLog.forEach(d => {
+    const dt = parse(d.startTime);
+    if (dt && hourlyByLoc[d.location] !== undefined) {
+      hourlyByLoc[d.location][dt.getHours()] += d.durationSeconds;
+    }
+  });
+
+  // 2) Flatten into a data array
+  const heatmapData = [];
+  locations.forEach(loc => {
+    hourlyByLoc[loc].forEach((val, h) => {
+      heatmapData.push({ location: loc, hour: h, value: val });
+    });
+  });
+
+  // 3) Clear & set SVG dimensions
+  d3.select("#peak-chart").html("");
+  const container = document.getElementById("peak-chart");
+  const width  = container.clientWidth || 800;
+  const height = 250;
+  const margin = { top: 40, right: 20, bottom: 60, left: 80 };
+  const cellSize = (width - margin.left - margin.right) / 24;
+
+  // 4) Scales
+  const x = d3.scaleBand()
+    .domain(d3.range(24))
+    .range([margin.left, margin.left + 24*cellSize]);
+  const y = d3.scaleBand()
+    .domain(locations)
+    .range([margin.top, margin.top + locations.length*cellSize])
+    .paddingInner(0.1);
+  const maxVal = d3.max(heatmapData, d => d.value);
+  const color = d3.scaleSequential([0, maxVal], d3.interpolateYlGnBu);
+
+  // 5) Create SVG
+  const svg = d3.select("#peak-chart")
+    .append("svg")
+    .attr("width", "100%")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("height", height);
+
+  // 6) Draw heat cells
+  svg.append("g")
+    .selectAll("rect")
+    .data(heatmapData)
+    .join("rect")
+      .attr("class", "cell")
+      .attr("x", d => x(d.hour))
+      .attr("y", d => y(d.location))
+      .attr("width",  cellSize)
+      .attr("height", cellSize)
+      .attr("fill", d => color(d.value));
+
+  // 7) X‑axis (hours)
+  svg.append("g")
+      .attr("transform", `translate(0,${margin.top - 5})`)
+      .call(d3.axisTop(x)
+        .tickValues(d3.range(0,24,2))
+        .tickFormat(d => d3.format("02")(d) + ":00")
+        .tickSizeOuter(0)
+      )
+    .selectAll("text")
+      .style("font-size","12px");
+
+  // svg.append("text")
+  //     .attr("x", margin.left + (24*cellSize)/2)
+  //     .attr("y", margin.top - 25)
+  //     .attr("text-anchor","middle")
+  //     .style("font-size","14px")
+  //     .text("Hour of Day");
+
+  // 8) Y‑axis (locations)
+  svg.append("g")
+      .attr("transform", `translate(${margin.left - 5},0)`)
+      .call(d3.axisLeft(y).tickSizeOuter(0))
+    .selectAll("text")
+      .style("font-size","12px");
+
+  // svg.append("text")
+  //     .attr("transform","rotate(-90)")
+  //     .attr("x", - (margin.top + locations.length*cellSize/2))
+  //     .attr("y", margin.left - 60)
+  //     .attr("text-anchor","middle")
+  //     .style("font-size","14px")
+  //     .text("Location");
+
+  // 9) Legend (gradient + axis)
+  const legendWidth = 400;
+  const legendHeight = 10;
+  const legendScale = d3.scaleLinear()
+      .domain([0, maxVal])
+      .range([0, legendWidth]);
+  const legendAxis = d3.axisBottom(legendScale)
+      .ticks(5)
+      .tickFormat(d => (d/60).toFixed(1) + " min");
+
+  const defs = svg.append("defs");
+  const grad = defs.append("linearGradient").attr("id","grad-peak");
+  grad.selectAll("stop")
+    .data(d3.range(0,1.01,0.1))
+    .enter().append("stop")
+      .attr("offset", t => t)
+      .attr("stop-color", t => color(t * maxVal));
+
+  const legend = svg.append("g")
+      .attr("transform", `translate(${width - margin.right - legendWidth}, ${height - 40})`);
+
+  legend.append("rect")
+      .attr("width", legendWidth)
+      .attr("height", legendHeight)
+      .style("fill", "url(#grad-peak)");
+
+  legend.append("g")
+      .attr("transform", `translate(0,${legendHeight})`)
+      .call(legendAxis)
+    .selectAll("text")
+      .style("font-size","12px");
+
+  legend.append("text")
+      .attr("x", legendWidth/2)
+      .attr("y", legendHeight + 30)
+      .attr("text-anchor","middle")
+      .style("font-size","12px")
+      .text("Total Duration");
+
+  resolve();
 }
 
 
