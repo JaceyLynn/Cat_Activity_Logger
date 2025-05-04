@@ -659,7 +659,7 @@ function drawHourlyChart(hourlyData) {
     const container = document.getElementById("session-chart");
     const width = container.clientWidth || 1000;
     const height = 600;
-    const margin = { top: 20, right: 30, bottom: 80, left: 60 };
+    const margin = { top: 20, right: 30, bottom: 60, left: 60 };
 
     const keys = ["Bed", "Food", "Window"];
 
@@ -739,138 +739,128 @@ function drawHourlyChart(hourlyData) {
 
 function drawPatternChart(sessionLog) {
   return new Promise((resolve) => {
-    d3.select("#pattern-chart").html(""); // Clear previous chart
+    // Clear previous chart
+    d3.select("#pattern-chart").html("");
 
-    const container = document.getElementById("session-chart");
+    const container = document.getElementById("pattern-chart");
     const width = container.clientWidth || 1000;
     const height = 200;
-    const margin = { top: 20, right: 30, bottom: 80, left: 80 };
+    const margin = { top: 20, right: 30, bottom: 60, left: 80 };
 
     // Parse times
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
-
     const data = sessionLog.map((d) => {
-      const timeObj = parseTime(d.startTime);
+      const t = parseTime(d.startTime);
       return {
-        timeOfDay: new Date(
-          1970,
-          0,
-          1,
-          timeObj.getHours(),
-          timeObj.getMinutes(),
-          timeObj.getSeconds()
-        ),
+        timeOfDay: new Date(1970, 0, 1, t.getHours(), t.getMinutes(), t.getSeconds()),
         location: d.location,
       };
-    });
-    const cleanedData = data.filter((d) => d.timeOfDay && d.location);
+    }).sort((a, b) => a.timeOfDay - b.timeOfDay);
 
-    // Sort sessions by time (important for connecting)
-    data.sort((a, b) => a.timeOfDay - b.timeOfDay);
-
-    // X: Time scale (24h)
-    const x = d3
-      .scaleTime()
-      .domain([new Date(1970, 0, 1, 0, 0, 0), new Date(1970, 0, 1, 23, 59, 59)])
+    // X scale
+    const x = d3.scaleTime()
+      .domain([new Date(1970,0,1,0,0,0), new Date(1970,0,1,23,59,59)])
       .range([margin.left, width - margin.right]);
 
-    // Y: Custom location scale
-    // Y: Custom location scale (Bed → Window → Food)
-    const y = d3
-      .scalePoint()
-      .domain(["Bed", "Window", "Food"])
+    // Y scale (Bed → Window → Food)
+    const locations = ["Bed","Window","Food"];
+    const y = d3.scalePoint()
+      .domain(locations)
       .range([margin.top, height - margin.bottom])
       .padding(0.5);
 
-    const color = d3
-      .scaleOrdinal()
-      .domain(["Bed", "Food", "Window"])
-      .range(["#D390CE", "#F5AB54", "#60D1DB"]);
+    // Color scale must match `locations`
+    const color = d3.scaleOrdinal()
+      .domain(locations)
+      .range(["#D390CE", "#60D1DB", "#F5AB54"]);
 
-    const svg = d3
-      .select("#pattern-chart")
+    const svg = d3.select("#pattern-chart")
       .append("svg")
-      .attr("width", "100%")
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("height", height);
+      .attr("width","100%")
+      .attr("viewBox",`0 0 ${width} ${height}`)
+      .attr("height",height);
 
-    // Line generator (connect points)
-    const line = d3
-      .line()
-      .x((d) => x(d.timeOfDay))
-      .y((d) => y(d.location))
-      .curve(d3.curveMonotoneX); // Smooth curve, or .curve(d3.curveLinear) for straight lines
+    // Line generator
+    const line = d3.line()
+      .x(d => x(d.timeOfDay))
+      .y(d => y(d.location))
+      .curve(d3.curveMonotoneX);
 
-    // Draw the connecting line with animation
-    const path = svg
-      .append("path")
+    // Draw the line
+    const path = svg.append("path")
       .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", "#666") // Line color
-      .attr("stroke-width", 1)
-      .attr("d", line);
+      .attr("fill","none")
+      .attr("stroke","#666")
+      .attr("stroke-width",1)
+      .attr("d",line);
 
-    // Animate the path drawing
-    const totalLength = path.node().getTotalLength();
-
+    // Animate line
+    const totalLen = path.node().getTotalLength();
     path
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-      .duration(3000) // 3 seconds (adjust as you like)
-      .ease(d3.easeLinear)
+      .attr("stroke-dasharray",`${totalLen} ${totalLen}`)
+      .attr("stroke-dashoffset", totalLen)
+      .transition().duration(3000).ease(d3.easeLinear)
       .attr("stroke-dashoffset", 0);
 
-    // Draw the dots
-    svg
-      .append("g")
+    // Draw the circles
+    svg.append("g")
       .selectAll("circle")
       .data(data)
       .join("circle")
-      .attr("cx", (d) => x(d.timeOfDay))
-      .attr("cy", (d) => y(d.location))
-      .attr("r", 3)
-      .attr("fill", (d) => color(d.location));
+        .attr("cx", d => x(d.timeOfDay))
+        .attr("cy", d => y(d.location))
+        .attr("r", 3)
+        .attr("fill", d => color(d.location));
 
     // X Axis
-    svg
-      .append("g")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(
-        d3
-          .axisBottom(x)
-          .ticks(d3.timeHour.every(1))
-          .tickFormat(d3.timeFormat("%H:%M"))
+    svg.append("g")
+      .attr("transform",`translate(0,${height - margin.bottom})`)
+      .call(d3.axisBottom(x)
+        .ticks(d3.timeHour.every(1))
+        .tickFormat(d3.timeFormat("%H:%M"))
       );
 
     // Y Axis
-    svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},0)`)
+    svg.append("g")
+      .attr("transform",`translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
-    
-      // ─── Legend ────────────────────────────────────────────────────────────────
+
+    // ─── Legend ────────────────────────────────────────────────────────────────
     const legend = svg.append("g")
       .attr("transform", `translate(${margin.left},${height - margin.bottom + 40})`);
 
-    keys.forEach((key, i) => {
+    locations.forEach((loc, i) => {
       const x0 = i * 140;
-      // shape
-      legend.append("path")
-        .attr("d", d3.symbol().type(shape(key)).size(80)())
-        .attr("transform", `translate(${x0},0)`)
-        .attr("fill", color(key));
+      // colored circle
+      legend.append("circle")
+        .attr("cx", x0)
+        .attr("cy", 0)
+        .attr("r", 6)
+        .attr("fill", color(loc));
       // label
       legend.append("text")
         .attr("x", x0 + 12)
-        .attr("y", 4)
-        .text(key)
+        .attr("y", 0)
+        .text(loc)
         .style("font-size","12px")
         .attr("alignment-baseline","middle");
     });
+
     resolve();
   });
 }
+
+// sessionLog: [{startTime: "…", durationSeconds:…, location:"Bed"},…]
+function computeHourlyTotals(sessionLog) {
+  const hours = Array.from({length:24},() => 0);
+  const parse = d3.timeParse("%Y-%m-%d %H:%M:%S");
+  sessionLog.forEach(d => {
+    const h = parse(d.startTime).getHours();
+    hours[h] += d.durationSeconds;
+  });
+  return hours;
+}
+
 
 setInterval(fetchCatData, 3000);
 fetchCatData();
