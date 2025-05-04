@@ -60,9 +60,15 @@ async function fetchCatData() {
     const latest = data[data.length - 1];
 
     // Duration counters
-    const bedDurationSeconds = data.filter(row => row.event2 === "cat_detected").length;
-    const windowDurationSeconds = data.filter(row => row.event1 === "cat_detected").length;
-    const foodDurationSeconds = data.filter(row => row.event3 === "cat_detected").length;
+    const bedDurationSeconds = data.filter(
+      (row) => row.event2 === "cat_detected"
+    ).length;
+    const windowDurationSeconds = data.filter(
+      (row) => row.event1 === "cat_detected"
+    ).length;
+    const foodDurationSeconds = data.filter(
+      (row) => row.event3 === "cat_detected"
+    ).length;
 
     let bedFrequency = 0;
     let windowFrequency = 0;
@@ -83,7 +89,10 @@ async function fetchCatData() {
 
       // === BED (event2) ===
       if (row.event2) {
-        if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
+        if (
+          lastBedStatus === "nothing_detected" &&
+          row.event2 === "cat_detected"
+        ) {
           bedSessionStart = currentTime;
         } else if (
           lastBedStatus === "cat_detected" &&
@@ -104,7 +113,9 @@ async function fetchCatData() {
           }
 
           if (!merge) {
-            const durationSec = Math.round((new Date(currentTime) - new Date(bedSessionStart)) / 1000);
+            const durationSec = Math.round(
+              (new Date(currentTime) - new Date(bedSessionStart)) / 1000
+            );
             sessionLog.push({
               startTime: bedSessionStart,
               durationSeconds: durationSec,
@@ -118,7 +129,10 @@ async function fetchCatData() {
 
       // === WINDOW (event1) ===
       if (row.event1) {
-        if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
+        if (
+          lastWindowStatus === "nothing_detected" &&
+          row.event1 === "cat_detected"
+        ) {
           windowSessionStart = currentTime;
         } else if (
           lastWindowStatus === "cat_detected" &&
@@ -140,21 +154,30 @@ async function fetchCatData() {
 
           if (!merge) {
             console.log(`[win] Merged session skipped at index ${i}`);
-            const durationSec = Math.round((new Date(currentTime) - new Date(windowSessionStart)) / 1000);
+            const durationSec = Math.round(
+              (new Date(currentTime) - new Date(windowSessionStart)) / 1000
+            );
             sessionLog.push({
               startTime: windowSessionStart,
               durationSeconds: durationSec,
               location: "Window",
             });
             windowSessionStart = null;
-          }else{console.log(`[win] Added session from ${bedSessionStart} to ${currentTime}`);}
+          } else {
+            console.log(
+              `[win] Added session from ${bedSessionStart} to ${currentTime}`
+            );
+          }
         }
         lastWindowStatus = row.event1;
       }
 
       // === FOOD (event3) ===
       if (row.event3) {
-        if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
+        if (
+          lastFoodStatus === "nothing_detected" &&
+          row.event3 === "cat_detected"
+        ) {
           foodSessionStart = currentTime;
         } else if (
           lastFoodStatus === "cat_detected" &&
@@ -175,7 +198,9 @@ async function fetchCatData() {
           }
 
           if (!merge) {
-            const durationSec = Math.round((new Date(currentTime) - new Date(foodSessionStart)) / 1000);
+            const durationSec = Math.round(
+              (new Date(currentTime) - new Date(foodSessionStart)) / 1000
+            );
             sessionLog.push({
               startTime: foodSessionStart,
               durationSeconds: durationSec,
@@ -212,9 +237,11 @@ async function fetchCatData() {
 
 async function fetchChartDataOnly(selectedDate) {
   try {
-    showSwitchingLoading() // 🔹 Show "Switching Data Set" overlay
+    showSwitchingLoading(); // 🔹 Show "Switching Data Set" overlay
 
-    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
+    const response = await fetch(
+      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
+    );
     const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
@@ -241,7 +268,10 @@ async function fetchChartDataOnly(selectedDate) {
 
       // === BED SESSION (event2) ===
       if (row.event2) {
-        if (lastBedStatus === "nothing_detected" && row.event2 === "cat_detected") {
+        if (
+          lastBedStatus === "nothing_detected" &&
+          row.event2 === "cat_detected"
+        ) {
           bedSessionStart = currentTime;
         } else if (
           lastBedStatus === "cat_detected" &&
@@ -279,7 +309,10 @@ async function fetchChartDataOnly(selectedDate) {
 
       // === WINDOW SESSION (event1) ===
       if (row.event1) {
-        if (lastWindowStatus === "nothing_detected" && row.event1 === "cat_detected") {
+        if (
+          lastWindowStatus === "nothing_detected" &&
+          row.event1 === "cat_detected"
+        ) {
           windowSessionStart = currentTime;
         } else if (
           lastWindowStatus === "cat_detected" &&
@@ -316,7 +349,10 @@ async function fetchChartDataOnly(selectedDate) {
 
       // === FOOD SESSION (event3) ===
       if (row.event3) {
-        if (lastFoodStatus === "nothing_detected" && row.event3 === "cat_detected") {
+        if (
+          lastFoodStatus === "nothing_detected" &&
+          row.event3 === "cat_detected"
+        ) {
           foodSessionStart = currentTime;
         } else if (
           lastFoodStatus === "cat_detected" &&
@@ -355,13 +391,12 @@ async function fetchChartDataOnly(selectedDate) {
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
     await updateCharts(currentSessionLog);
-    hideSwitchingLoading()// ✅ Hide when charts are ready
+    hideSwitchingLoading(); // ✅ Hide when charts are ready
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
-    hideSwitchingLoading()
+    hideSwitchingLoading();
   }
 }
-
 
 async function updateCharts(currentSessionLog) {
   // Wait for each chart to finish drawing before continuing
@@ -487,8 +522,9 @@ function drawSessionChart(sessionLog) {
   return new Promise((resolve) => {
     d3.select("#session-chart").html(""); // Clear previous chart
 
-    const width = 1000;
-    const height = 1000;
+    const container = document.getElementById("session-chart");
+    const width = container.clientWidth || 1000;
+    const height = 700;
     const margin = { top: 20, right: 30, bottom: 30, left: 60 };
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
@@ -529,7 +565,8 @@ function drawSessionChart(sessionLog) {
     const svg = d3
       .select("#session-chart")
       .append("svg")
-      .attr("width", width)
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("height", height);
 
     // Draw points
@@ -592,7 +629,8 @@ function drawHourlyChart(hourlyData) {
   return new Promise((resolve) => {
     d3.select("#hourly-chart").html(""); // Clear previous chart
 
-    const width = 1000;
+    const container = document.getElementById("session-chart");
+    const width = container.clientWidth || 1000;
     const height = 600;
     const margin = { top: 20, right: 30, bottom: 30, left: 50 };
 
@@ -619,7 +657,8 @@ function drawHourlyChart(hourlyData) {
     const svg = d3
       .select("#hourly-chart")
       .append("svg")
-      .attr("width", width)
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("height", height);
 
     svg
@@ -653,7 +692,8 @@ function drawPatternChart(sessionLog) {
   return new Promise((resolve) => {
     d3.select("#pattern-chart").html(""); // Clear previous chart
 
-    const width = 1000;
+    const container = document.getElementById("session-chart");
+    const width = container.clientWidth || 1000;
     const height = 300;
     const margin = { top: 20, right: 30, bottom: 30, left: 80 };
 
@@ -700,7 +740,8 @@ function drawPatternChart(sessionLog) {
     const svg = d3
       .select("#pattern-chart")
       .append("svg")
-      .attr("width", width)
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("height", height);
 
     // Line generator (connect points)
