@@ -30,16 +30,20 @@ async function populateDateFilter() {
 
 let loadingTimeout;
 
-function showLoading() {
-  clearTimeout(loadingTimeout);
+function showInitialLoading() {
   document.getElementById("loading-overlay").style.display = "flex";
 }
-
-function hideLoading() {
-  loadingTimeout = setTimeout(() => {
-    document.getElementById("loading-overlay").style.display = "none";
-  }, 100); // small delay prevents flicker
+function hideInitialLoading() {
+  document.getElementById("loading-overlay").style.display = "none";
 }
+
+function showSwitchingLoading() {
+  document.getElementById("switching-overlay").style.display = "flex";
+}
+function hideSwitchingLoading() {
+  document.getElementById("switching-overlay").style.display = "none";
+}
+
 let isInitialLoad = true;
 
 async function fetchCatData() {
@@ -47,7 +51,7 @@ async function fetchCatData() {
     if (isUserSwitchingDate) return;
 
     // Only show loading on the first load
-    if (isInitialLoad) showLoading();
+    if (isInitialLoad) showInitialLoading();
 
     const res = await fetch("/catdata");
     const data = await res.json();
@@ -173,27 +177,23 @@ async function fetchCatData() {
 
 // Hide loading after the first load
     if (isInitialLoad) {
-      hideLoading();
+      hideInitialLoading();
       isInitialLoad = false;
     }
   } catch (err) {
     console.error("Error fetching cat data:", err);
-    if (isInitialLoad) hideLoading();
+    if (isInitialLoad) hideInitialLoading();;
   }
 }
 
 async function fetchChartDataOnly(selectedDate) {
   try {
-    showLoading();
-    isUserSwitchingDate = true;
-
-    const response = await fetch(
-      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
-    );
+    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
     const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       console.warn("No data found for the selected day.");
+      hideSwitchingLoading(); // ✅ hide even if no data
       return;
     }
 
@@ -292,24 +292,22 @@ async function fetchChartDataOnly(selectedDate) {
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
     // ✅ Wait for chart drawing to complete
-    await updateCharts(currentSessionLog);
-    hideLoading();
-    isUserSwitchingDate = false;
+    await updateCharts(currentSessionLog); // ✅ wait for chart update to complete
+    hideSwitchingLoading(); // ✅ finally hide
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
-    hideLoading();
-    isUserSwitchingDate = false;
+    hideSwitchingLoading(); // ✅ ensure it's hidden even on error
   }
 }
 
 async function updateCharts(currentSessionLog) {
+  // Wait for each chart to finish drawing before continuing
   await drawSessionChart(currentSessionLog);
+
   const hourlyData = prepareHourlySummary(currentSessionLog);
   await drawHourlyChart(hourlyData);
-  await drawPatternChart(currentSessionLog);
 
-  // Wait 500ms to ensure rendering completes before hiding loading
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await drawPatternChart(currentSessionLog);
 }
 
 function prepareHourlySummary(sessionLog) {
@@ -424,11 +422,11 @@ function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
 
 function drawSessionChart(sessionLog) {
   return new Promise((resolve) => {
-    d3.select("#session-chart").html(""); // Clear previous chart if needed
+    d3.select("#session-chart").html(""); // Clear previous chart
 
     const width = 1000;
     const height = 1000;
-    const margin = { top: 20, right: 30, bottom: 30, left: 50 };
+    const margin = { top: 20, right: 30, bottom: 30, left: 60 };
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
@@ -437,8 +435,9 @@ function drawSessionChart(sessionLog) {
       durationSeconds: d.durationSeconds,
       location: d.location,
     }));
+
     const cleanedData = data.filter(
-      (d) => d.startTime && d.durationSeconds !== undefined && d.location
+      (d) => d.startTime && d.durationSeconds > 0 && d.location
     );
 
     // X: start time scale
@@ -447,12 +446,12 @@ function drawSessionChart(sessionLog) {
       .domain(d3.extent(cleanedData, (d) => d.startTime))
       .range([margin.left, width - margin.right]);
 
-    // Y: session duration
+    // Y: session duration using log scale
     const y = d3
-      .scaleLinear()
-      .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
-      .nice()
-      .range([height - margin.bottom, margin.top]);
+      .scaleLog()
+      .domain([1, d3.max(cleanedData, (d) => d.durationSeconds)]) // avoid 0
+      .range([height - margin.bottom, margin.top])
+      .clamp(true);
 
     const shape = d3
       .scaleOrdinal()
@@ -500,15 +499,16 @@ function drawSessionChart(sessionLog) {
           .tickSizeOuter(0)
       );
 
-    // Y axis (duration)
+    // Y axis (log scale, formatted)
     svg
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
-      .call(d3.axisLeft(y).ticks(5));
+      .call(d3.axisLeft(y).ticks(6, "~s")); // nice formatting like 1k, 10k
 
-    resolve(); // ✅ Mark async work complete
+    resolve();
   });
 }
+
 
 function drawHourlyChart(hourlyData) {
   return new Promise((resolve) => {
@@ -687,10 +687,11 @@ setInterval(fetchCatData, 3000);
 fetchCatData();
 populateDateFilter();
 
-// document.getElementById("date-filter").addEventListener("change", (e) => {
-//   const selectedDate = e.target.value;
-//   if (selectedDate) {
-//     isUserSwitchingDate = true; // Prevent real-time polling from interfering
-//     fetchChartDataOnly(selectedDate); // Load data and update charts
-//   }
-// });
+document.getElementById("date-filter").addEventListener("change", (e) => {
+  const selectedDate = e.target.value;
+  if (selectedDate) {
+    isUserSwitchingDate = true;
+    showSwitchingLoading(); // ✅ Show switch loading
+    fetchChartDataOnly(selectedDate);
+  }
+});

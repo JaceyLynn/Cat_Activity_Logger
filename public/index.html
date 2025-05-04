@@ -14,10 +14,19 @@
   </head>
   <body>
     <div class="container">
-      <div id="loading-overlay" style="display: none">
+      <!-- Initial Full Page Loading -->
+      <div id="loading-overlay" class="loading-overlay">
         <div class="loading-box">
           <span class="blink">🐾</span><br />
           Loading...
+        </div>
+      </div>
+
+      <!-- Day Switch Loading -->
+      <div id="switching-overlay" class="loading-overlay">
+        <div class="loading-box">
+          <span class="blink">🐾</span><br />
+          Switching dataset...
         </div>
       </div>
       <h1>Where is my cat now?</h1>
