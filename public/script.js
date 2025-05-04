@@ -183,16 +183,14 @@ async function fetchCatData() {
 }
 
 async function fetchChartDataOnly(selectedDate) {
-  showLoading(); // 🔹 START LOADING UI
+  showLoading(); // Show loading screen immediately
+
   try {
-    const response = await fetch(
-      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
-    );
+    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
     const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       console.warn("No data found for the selected day.");
-      hideLoading(); // 🔚 hide loading if nothing found
       return;
     }
 
@@ -290,19 +288,21 @@ async function fetchChartDataOnly(selectedDate) {
 
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
-    await updateCharts(currentSessionLog); // ✅ Await to ensure full rendering
-    hideLoading(); // 🔚 END after all rendering is done
+    await updateCharts(currentSessionLog); // Ensure charts are fully rendered before hiding loading screen
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
-    hideLoading(); // Hide on error too
+  } finally {
+    hideLoading(); // Hide loading screen after processing is complete
   }
 }
+
 
 async function updateCharts(currentSessionLog) {
   await drawSessionChart(currentSessionLog); // ✅ make sure these are either async or handled with Promises
   const hourlyData = prepareHourlySummary(currentSessionLog);
   await drawHourlyChart(hourlyData);
   await drawPatternChart(currentSessionLog);
+  
 }
 
 function prepareHourlySummary(sessionLog) {
@@ -415,7 +415,7 @@ function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
   `;
 }
 
-function drawSessionChart(data) {
+function drawSessionChart(sessionLog) {
   return new Promise((resolve) => {
     d3.select("#session-chart").html(""); // Clear previous chart if needed
 
