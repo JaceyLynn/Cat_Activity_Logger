@@ -546,11 +546,12 @@ function drawSessionChart(sessionLog) {
       .range([margin.left, width - margin.right]);
 
     // Y: session duration using log scale
-    const y = d3
-      .scaleLog()
-      .domain([1, d3.max(cleanedData, (d) => d.durationSeconds)]) // avoid 0
-      .range([height - margin.bottom, margin.top])
-      .clamp(true);
+const y = d3
+  .scalePow()
+  .exponent(0.3) // sqrt-compression 0.3 ~ 0.7
+  .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
+  .range([height - margin.bottom, margin.top]);
+
 
     const shape = d3
       .scaleOrdinal()
@@ -595,21 +596,15 @@ function drawSessionChart(sessionLog) {
       .call(
         d3
           .axisBottom(x)
-          .ticks(d3.timeHour.every(2)) // every 2 hours (adjust as needed)
+          .ticks(d3.timeHour.every(1)) // every 2 hours (adjust as needed)
           .tickFormat(d3.timeFormat("%H:%M")) // 24-hour format
           .tickSizeOuter(0)
       );
 
     // Y axis (log scale, formatted)
-    svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},0)`)
-      .call(
-        d3
-          .axisLeft(y)
-          .tickValues(y.ticks().filter((t) => Number.isFinite(t))) // avoid Infinity
-          .tickFormat(d3.format("~d")) // plain numbers, no "1k" or scientific notation
-      );
+ svg.append("g")
+  .attr("transform", `translate(${margin.left},0)`)
+  .call(d3.axisLeft(y).ticks(20).tickFormat(d => `${(d / 60).toFixed(1)} `));
     // Y Axis label
     svg
       .append("text")
@@ -617,7 +612,7 @@ function drawSessionChart(sessionLog) {
       .attr("transform", `rotate(-90)`)
       .attr("x", -height / 2)
       .attr("y", 15) // distance from the axis; adjust as needed
-      .text("Duration (seconds)")
+      .text("Duration (min)")
       .style("fill", "#333")
       .style("font-size", "14px");
 
@@ -789,7 +784,7 @@ function drawPatternChart(sessionLog) {
       .call(
         d3
           .axisBottom(x)
-          .ticks(d3.timeHour.every(2))
+          .ticks(d3.timeHour.every(1))
           .tickFormat(d3.timeFormat("%H:%M"))
       );
 
