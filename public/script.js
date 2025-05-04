@@ -694,7 +694,7 @@ function drawPatternChart(sessionLog) {
 
     const container = document.getElementById("session-chart");
     const width = container.clientWidth || 1000;
-    const height = 300;
+    const height = 200;
     const margin = { top: 20, right: 30, bottom: 30, left: 80 };
 
     // Parse times
