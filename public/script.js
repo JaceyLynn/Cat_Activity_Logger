@@ -127,7 +127,7 @@ async function fetchCatData() {
         ) {
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 5; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 100; j++) {
             const next = data[j];
             if (!next.event1) continue;
             skipCount++;
@@ -139,6 +139,7 @@ async function fetchCatData() {
           }
 
           if (!merge) {
+            console.log(`[win] Merged session skipped at index ${i}`);
             const durationSec = Math.round((new Date(currentTime) - new Date(windowSessionStart)) / 1000);
             sessionLog.push({
               startTime: windowSessionStart,
@@ -146,7 +147,7 @@ async function fetchCatData() {
               location: "Window",
             });
             windowSessionStart = null;
-          }
+          }else{console.log(`[win] Added session from ${bedSessionStart} to ${currentTime}`);}
         }
         lastWindowStatus = row.event1;
       }
@@ -287,7 +288,7 @@ async function fetchChartDataOnly(selectedDate) {
         ) {
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 30; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 300; j++) {
             const next = data[j];
             if (!next.event1) continue;
             skipCount++;
