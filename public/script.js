@@ -175,20 +175,22 @@ async function fetchCatData() {
       data
     );
 
-// Hide loading after the first load
+    // Hide loading after the first load
     if (isInitialLoad) {
       hideInitialLoading();
       isInitialLoad = false;
     }
   } catch (err) {
     console.error("Error fetching cat data:", err);
-    if (isInitialLoad) hideInitialLoading();;
+    if (isInitialLoad) hideInitialLoading();
   }
 }
 
 async function fetchChartDataOnly(selectedDate) {
   try {
-    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
+    const response = await fetch(
+      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
+    );
     const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
@@ -495,7 +497,8 @@ function drawSessionChart(sessionLog) {
       .call(
         d3
           .axisBottom(x)
-          .ticks(width / 80)
+          .ticks(d3.timeHour.every(2)) // every 2 hours (adjust as needed)
+          .tickFormat(d3.timeFormat("%H:%M")) // 24-hour format
           .tickSizeOuter(0)
       );
 
@@ -503,12 +506,26 @@ function drawSessionChart(sessionLog) {
     svg
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
-      .call(d3.axisLeft(y).ticks(6, "~s")); // nice formatting like 1k, 10k
+      .call(
+        d3
+          .axisLeft(y)
+          .tickValues(y.ticks().filter((t) => Number.isFinite(t))) // avoid Infinity
+          .tickFormat(d3.format("~d")) // plain numbers, no "1k" or scientific notation
+      );
+    // Y Axis label
+    svg
+      .append("text")
+      .attr("text-anchor", "middle")
+      .attr("transform", `rotate(-90)`)
+      .attr("x", -height / 2)
+      .attr("y", 15) // distance from the axis; adjust as needed
+      .text("Duration (seconds)")
+      .style("fill", "#333")
+      .style("font-size", "14px");
 
     resolve();
   });
 }
-
 
 function drawHourlyChart(hourlyData) {
   return new Promise((resolve) => {
