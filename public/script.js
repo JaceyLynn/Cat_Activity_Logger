@@ -88,53 +88,124 @@ async function fetchCatData() {
       const currentTime = row.local_timestamp;
 
       // Bed session detection
-      if (row.event2) {
-        if (
-          lastBedStatus === "nothing_detected" &&
-          row.event2 === "cat_detected"
-        ) {
-          bedSessionStart = currentTime;
-        } else if (
-          lastBedStatus === "cat_detected" &&
-          row.event2 === "nothing_detected" &&
-          bedSessionStart
-        ) {
-          const durationSec = Math.round(
-            (new Date(currentTime) - new Date(bedSessionStart)) / 1000
-          );
-          sessionLog.push({
-            startTime: bedSessionStart,
-            durationSeconds: durationSec,
-            location: "Bed",
-          });
-          bedSessionStart = null;
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const currentTime = row.local_timestamp;
+
+        // --- Bed sessions logic ---
+        if (row.event2) {
+          if (
+            lastBedStatus === "nothing_detected" &&
+            row.event2 === "cat_detected"
+          ) {
+            bedSessionStart = currentTime;
+          } else if (
+            lastBedStatus === "cat_detected" &&
+            row.event2 === "nothing_detected" &&
+            bedSessionStart
+          ) {
+            // Look ahead to see if another 'cat_detected' comes soon
+            let merge = false;
+            let skipCount = 0;
+
+            for (let j = i + 1; j < data.length && skipCount < 30; j++) {
+              const next = data[j];
+              if (!next.event2) continue; // skip nulls
+              skipCount++;
+
+              if (next.event2 === "cat_detected") {
+                merge = true;
+                break;
+              }
+              if (next.event2 === "nothing_detected") break; // strong gap
+            }
+
+            if (!merge) {
+              const start = new Date(bedSessionStart);
+              const end = new Date(currentTime);
+              const durationSec = Math.round((end - start) / 1000);
+              sessionLog.push({
+                startTime: bedSessionStart,
+                durationSeconds: durationSec,
+                location: "Bed",
+              });
+              bedSessionStart = null;
+            }
+          }
+          lastBedStatus = row.event2;
         }
-        lastBedStatus = row.event2;
       }
 
       // Window session detection
-      if (row.event1) {
-        if (
-          lastWindowStatus === "nothing_detected" &&
-          row.event1 === "cat_detected"
-        ) {
-          windowSessionStart = currentTime;
-        } else if (
-          lastWindowStatus === "cat_detected" &&
-          row.event1 === "nothing_detected" &&
-          windowSessionStart
-        ) {
-          const durationSec = Math.round(
-            (new Date(currentTime) - new Date(windowSessionStart)) / 1000
-          );
-          sessionLog.push({
-            startTime: windowSessionStart,
-            durationSeconds: durationSec,
-            location: "Window",
-          });
-          windowSessionStart = null;
+      // if (row.event1) {
+      //   if (
+      //     lastWindowStatus === "nothing_detected" &&
+      //     row.event1 === "cat_detected"
+      //   ) {
+      //     windowSessionStart = currentTime;
+      //   } else if (
+      //     lastWindowStatus === "cat_detected" &&
+      //     row.event1 === "nothing_detected" &&
+      //     windowSessionStart
+      //   ) {
+      //     const durationSec = Math.round(
+      //       (new Date(currentTime) - new Date(windowSessionStart)) / 1000
+      //     );
+      //     sessionLog.push({
+      //       startTime: windowSessionStart,
+      //       durationSeconds: durationSec,
+      //       location: "Window",
+      //     });
+      //     windowSessionStart = null;
+      //   }
+      //   lastWindowStatus = row.event1;
+      // }
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const currentTime = row.local_timestamp;
+
+        // --- window logic ---
+        if (row.event1) {
+          if (
+            lastWindowStatus === "nothing_detected" &&
+            row.event1 === "cat_detected"
+          ) {
+            windowSessionStart = currentTime;
+          } else if (
+            lastWindowStatus === "cat_detected" &&
+            row.event1 === "nothing_detected" &&
+            windowSessionStart
+          ) {
+            // Look ahead to see if another 'cat_detected' comes soon
+            let merge = false;
+            let skipCount = 0;
+
+            for (let j = i + 1; j < data.length && skipCount < 50; j++) {
+              const next = data[j];
+              if (!next.event1) continue; // skip nulls
+              skipCount++;
+
+              if (next.event1 === "cat_detected") {
+                merge = true;
+                break;
+              }
+              if (next.event1 === "nothing_detected") break; // strong gap
+            }
+
+            if (!merge) {
+              const start = new Date(windowSessionStart);
+              const end = new Date(currentTime);
+              const durationSec = Math.round((end - start) / 1000);
+              sessionLog.push({
+                startTime: windowSessionStart,
+                durationSeconds: durationSec,
+                location: "Window",
+              });
+              windowSessionStart = null;
+            }
+          }
+          lastWindowStatus = row.event1;
         }
-        lastWindowStatus = row.event1;
       }
 
       // Food session detection
