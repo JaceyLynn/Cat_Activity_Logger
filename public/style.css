@@ -1,6 +1,6 @@
-.bonbon-regular {
-  font-family: "Bonbon", cursive;
-  font-weight: 400;
+.bellota-light {
+  font-family: "Bellota", system-ui;
+  font-weight: 300;
   font-style: normal;
 }
 
@@ -41,7 +41,7 @@ body {
   background: #ffffff;
   padding: 24px 36px;
   border-radius: 16px;
-  font-family: "Bonbon", cursive;
+  font-family: "Bellota", system-ui;
   font-size: 1.5rem;
   font-weight: bold;
   text-align: center;
@@ -59,7 +59,7 @@ body {
 
 
 h1 {
-  font-family: "Bonbon", cursive;
+  font-family: "Bellota", system-ui;
   font-size: 3.5rem;
   border-bottom: 1px solid #ccc;
   padding-bottom: 0.5rem;
@@ -75,7 +75,7 @@ h1 {
 
 .status-box {
   flex: 1;
-  padding: 1rem;
+  padding: 2rem;
   border-radius: 20px;
   background: #b28f7e;
   color: white;
@@ -101,7 +101,7 @@ h1 {
 
 .status-box .icon {
   font-size: 2rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .dropdown-wrapper {
@@ -154,7 +154,7 @@ h1 {
 
 h2{
   margin-top: 0;
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: 800;
   font-family: "Baloo Bhaijaan 2", sans-serif;
   color: white;
