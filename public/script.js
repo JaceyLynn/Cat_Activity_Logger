@@ -101,7 +101,7 @@ async function fetchCatData() {
         ) {
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 30; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 300; j++) {
             const next = data[j];
             if (!next.event2) continue;
             skipCount++;
@@ -141,7 +141,7 @@ async function fetchCatData() {
         ) {
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 100; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 300; j++) {
             const next = data[j];
             if (!next.event1) continue;
             skipCount++;
@@ -281,7 +281,7 @@ async function fetchChartDataOnly(selectedDate) {
           // Peek forward
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 30; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 300; j++) {
             const next = data[j];
             if (!next.event2) continue; // skip nulls
             skipCount++;
