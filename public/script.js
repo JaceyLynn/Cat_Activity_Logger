@@ -525,7 +525,7 @@ function drawSessionChart(sessionLog) {
     const container = document.getElementById("session-chart");
     const width = container.clientWidth || 1000;
     const height = 700;
-    const margin = { top: 20, right: 30, bottom: 30, left: 60 };
+    const margin = { top: 20, right: 30, bottom: 60, left: 60 };
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
@@ -620,6 +620,33 @@ function drawSessionChart(sessionLog) {
       .text("Duration (min)")
       .style("fill", "#333")
       .style("font-size", "14px");
+
+    // ─── Legend ────────────────────────────────────────────────────────────────
+    const legendData = ["Bed", "Food", "Window"];
+    const legend = svg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${margin.left},${height - margin.bottom + 40})`
+      );
+
+    legendData.forEach((loc, i) => {
+      // symbol
+      legend
+        .append("path")
+        .attr("d", d3.symbol().type(shape(loc)).size(100)())
+        .attr("transform", `translate(${i * 140}, 0)`)
+        .attr("fill", color(loc));
+
+      // label
+      legend
+        .append("text")
+        .attr("x", i * 140 + 10)
+        .attr("y", 5)
+        .text(loc)
+        .style("font-size", "12px")
+        .attr("alignment-baseline", "middle");
+    });
 
     resolve();
   });
@@ -726,9 +753,10 @@ function drawPatternChart(sessionLog) {
       .range([margin.left, width - margin.right]);
 
     // Y: Custom location scale
+    // Y: Custom location scale (Bed → Window → Food)
     const y = d3
       .scalePoint()
-      .domain(["Bed", "Food", "Window"])
+      .domain(["Bed", "Window", "Food"])
       .range([margin.top, height - margin.bottom])
       .padding(0.5);
 
