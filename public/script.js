@@ -41,19 +41,18 @@ function hideLoading() {
   }, 100); // small delay prevents flicker
 }
 let isInitialLoad = true;
+
 async function fetchCatData() {
-  if (isUserSwitchingDate) return; // 🔹 Skip real-time fetch during manual switch
   try {
-    // Only show loading on first load if you want
+    if (isUserSwitchingDate) return;
+
+    // Only show loading on the first load
     if (isInitialLoad) showLoading();
 
     const res = await fetch("/catdata");
     const data = await res.json();
 
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      console.warn("No data found in sheet.");
-      return;
-    }
+    if (!data || !Array.isArray(data)) return;
 
     const latest = data[data.length - 1];
 
@@ -172,21 +171,25 @@ async function fetchCatData() {
       data
     );
 
-    if (!hasInitialLoadCompleted) {
+// Hide loading after the first load
+    if (isInitialLoad) {
       hideLoading();
-      hasInitialLoadCompleted = true;
+      isInitialLoad = false;
     }
   } catch (err) {
     console.error("Error fetching cat data:", err);
-    if (!hasInitialLoadCompleted) hideLoading();
+    if (isInitialLoad) hideLoading();
   }
 }
 
 async function fetchChartDataOnly(selectedDate) {
-  showLoading();
   try {
+    showLoading();
+    isUserSwitchingDate = true;
 
-    const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
+    const response = await fetch(
+      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
+    );
     const data = await response.json();
 
     if (!data || !Array.isArray(data) || data.length === 0) {
@@ -288,26 +291,26 @@ async function fetchChartDataOnly(selectedDate) {
 
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
+    // ✅ Wait for chart drawing to complete
     await updateCharts(currentSessionLog);
+    hideLoading();
+    isUserSwitchingDate = false;
   } catch (err) {
-    console.error("Error fetching selected date data:", err);
-  } finally {
-    isUserSwitchingDate = false; // ✅ Re-enable real-time polling
-    hideLoading();               // ✅ Hide only after charts are done
+    console.error("Error fetching data for selected day:", err);
+    hideLoading();
+    isUserSwitchingDate = false;
   }
 }
 
-
 async function updateCharts(currentSessionLog) {
-  drawSessionChart(currentSessionLog);
+  await drawSessionChart(currentSessionLog);
   const hourlyData = prepareHourlySummary(currentSessionLog);
-  drawHourlyChart(hourlyData);
-  drawPatternChart(currentSessionLog);
-  
-  // Wait 500ms to ensure rendering completes before hiding loading
-  await new Promise(resolve => setTimeout(resolve, 500));
-}
+  await drawHourlyChart(hourlyData);
+  await drawPatternChart(currentSessionLog);
 
+  // Wait 500ms to ensure rendering completes before hiding loading
+  await new Promise((resolve) => setTimeout(resolve, 500));
+}
 
 function prepareHourlySummary(sessionLog) {
   // Initialize hourly summary
@@ -507,7 +510,6 @@ function drawSessionChart(sessionLog) {
   });
 }
 
-
 function drawHourlyChart(hourlyData) {
   return new Promise((resolve) => {
     d3.select("#hourly-chart").html(""); // Clear previous chart
@@ -684,3 +686,11 @@ function drawPatternChart(sessionLog) {
 setInterval(fetchCatData, 3000);
 fetchCatData();
 populateDateFilter();
+
+// document.getElementById("date-filter").addEventListener("change", (e) => {
+//   const selectedDate = e.target.value;
+//   if (selectedDate) {
+//     isUserSwitchingDate = true; // Prevent real-time polling from interfering
+//     fetchChartDataOnly(selectedDate); // Load data and update charts
+//   }
+// });
