@@ -40,12 +40,12 @@ function hideLoading() {
     document.getElementById("loading-overlay").style.display = "none";
   }, 100); // small delay prevents flicker
 }
-
+let isInitialLoad = true;
 async function fetchCatData() {
+  if (isUserSwitchingDate) return; // 🔹 Skip real-time fetch during manual switch
   try {
-    if (isUserSwitchingDate) return;
-
-    if (!hasInitialLoadCompleted) showLoading(); // only for first time
+    // Only show loading on first load if you want
+    if (isInitialLoad) showLoading();
 
     const res = await fetch("/catdata");
     const data = await res.json();
@@ -183,9 +183,9 @@ async function fetchCatData() {
 }
 
 async function fetchChartDataOnly(selectedDate) {
-  showLoading(); // Show loading screen immediately
-
+  showLoading();
   try {
+
     const response = await fetch(`/catdata?sheet=${encodeURIComponent(selectedDate)}`);
     const data = await response.json();
 
@@ -288,11 +288,12 @@ async function fetchChartDataOnly(selectedDate) {
 
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
-    await updateCharts(currentSessionLog); // Ensure charts are fully rendered before hiding loading screen
+    await updateCharts(currentSessionLog);
   } catch (err) {
-    console.error("Error fetching data for selected day:", err);
+    console.error("Error fetching selected date data:", err);
   } finally {
-    hideLoading(); // Hide loading screen after processing is complete
+    isUserSwitchingDate = false; // ✅ Re-enable real-time polling
+    hideLoading();               // ✅ Hide only after charts are done
   }
 }
 
