@@ -29,14 +29,27 @@ async function populateDateFilter() {
   }
 }
 
-document.getElementById("weekly-filter")
-  .addEventListener("change", (e) => {
-    const v = e.target.value;
-    if (!v) return;
-    isUserSwitchingDate = true;    // block daily polling
-    fetchWeeklyData(v).then(() => {
-      isUserSwitchingDate = false; // re‑enable afterwards
-    });
+document.getElementById("weekly-filter").addEventListener("change", async (e) => {
+  const weekKey = e.target.value; // "thisWeek" or "lastWeek" or ""
+  if (!weekKey) {
+    // user cleared it, go back to live
+    isUserSwitchingWeekly = false;
+    return;
+  }
+
+  // block live‑polling & daily‑fetch
+  isUserSwitchingWeekly = true;
+  showWeeklyLoading();    // your new weekly overlay
+
+  try {
+    // fetchWeeklyData should compute sessionLog & redraw
+    await fetchWeeklyData(weekKey);
+  } catch (err) {
+    console.error("Weekly data error:", err);
+  } finally {
+    hideWeeklyLoading();
+    isUserSwitchingWeekly = false;
+  }
 });
 
 
@@ -68,7 +81,7 @@ let isInitialLoad = true;
 async function fetchCatData() {
   
   try {
-    if (isUserSwitchingDate) return;
+    if (isUserSwitchingDate || isUserSwitchingWeekly) return;
 
     if (isInitialLoad) showInitialLoading();
 
