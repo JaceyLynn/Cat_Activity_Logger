@@ -11,21 +11,24 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjzPKm6L_gFr
 app.use(express.static("public")); // Serve static files from the 'public' folder
 
 // Proxy endpoint
-app.get("/catdata", async (req, res) => {
+app.get('/catdata', async (req, res) => {
+  const { sheet, mode } = req.query;
+  // Build the Apps Script URL
+  let url = GOOGLE_SCRIPT_URL + '?';
+  if (mode === 'listSheets') {
+    url += 'mode=listSheets';
+  } else if (sheet) {
+    url += 'sheet=' + encodeURIComponent(sheet);
+  }
   try {
-    const params = new URLSearchParams(req.query).toString();
-
-    console.log("[Glitch] Incoming query params:", req.query);
-    console.log("[Glitch] Final URL to Apps Script:", `${GOOGLE_SCRIPT_URL}?${params}`);
-
-    const finalUrl = `${GOOGLE_SCRIPT_URL}?${params}`;
-    const response = await fetch(finalUrl);
-    const data = await response.json();
-
-    res.json(data);
+    const apiRes = await fetch(url);
+    const text = await apiRes.text();
+    // forward JSON or error
+    res.set('Content-Type','application/json');
+    res.send(text);
   } catch (err) {
-    console.error("[Glitch] Proxy error:", err);
-    res.status(500).json({ error: "Proxy failed" });
+    console.error('Proxy error', err);
+    res.status(502).send({error: 'Bad gateway'});
   }
 });
 

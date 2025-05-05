@@ -4,6 +4,7 @@
 let currentSessionLog = [];
 let isUserSwitchingDate = false;
 let hasInitialLoadCompleted = false;
+let isUserSwitchingWeekly = false;
 
 async function populateDateFilter() {
   try {
@@ -65,6 +66,7 @@ function hideWeeklyLoading() {
 let isInitialLoad = true;
 
 async function fetchCatData() {
+  
   try {
     if (isUserSwitchingDate) return;
 
@@ -1150,8 +1152,6 @@ async function drawPeakChart(sessionLog) {
     .attr("text-anchor", "middle")
     .style("font-size", "12px")
     .text("Total Duration");
-
-  resolve();
 }
 
 async function drawMovementChart(sessionLog) {
@@ -1261,9 +1261,6 @@ svg.append("g")
     .on("mouseout", () => {
       tooltip.style("display", "none");
     });
-
-
-  // done
 }
 
 setInterval(fetchCatData, 3000);
