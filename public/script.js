@@ -270,7 +270,11 @@ async function fetchCatData() {
 
 async function fetchChartDataOnly(selectedDate) {
   try {
-    showSwitchingLoading(); // 🔹 Show "Switching Data Set" overlay
+    // don’t load daily if weekly is in progress
+    if (isUserSwitchingWeekly) return;
+
+    isUserSwitchingDate = true;
+    showSwitchingLoading();
 
     const response = await fetch(
       `/catdata?sheet=${encodeURIComponent(selectedDate)}`
