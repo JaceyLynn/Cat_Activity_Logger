@@ -13,24 +13,27 @@ app.use(express.static("public")); // Serve static files from the 'public' folde
 // Proxy endpoint
 app.get('/catdata', async (req, res) => {
   const { sheet, mode } = req.query;
-  // Build the Apps Script URL
+  console.log('🔍 /catdata called with:', { sheet, mode });
+
   let url = GOOGLE_SCRIPT_URL + '?';
   if (mode === 'listSheets') {
     url += 'mode=listSheets';
   } else if (sheet) {
     url += 'sheet=' + encodeURIComponent(sheet);
   }
+  console.log('➡️ Proxying to Apps Script URL:', url);
+
   try {
     const apiRes = await fetch(url);
-    const text = await apiRes.text();
-    // forward JSON or error
+    const text   = await apiRes.text();
     res.set('Content-Type','application/json');
     res.send(text);
   } catch (err) {
     console.error('Proxy error', err);
-    res.status(502).send({error: 'Bad gateway'});
+    res.status(502).send({ error: 'Bad gateway' });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
