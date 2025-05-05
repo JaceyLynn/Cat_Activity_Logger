@@ -404,7 +404,8 @@ async function updateCharts(currentSessionLog) {
   const hourlyData = prepareHourlySummary(currentSessionLog);
   await drawHourlyChart(hourlyData);
   await drawPatternChart(currentSessionLog);
-  await drawPeakChart(currentSessionLog); 
+  await drawPeakChart(currentSessionLog);
+  await drawMovementChart(currentSessionLog);
 }
 
 function prepareHourlySummary(sessionLog) {
@@ -501,7 +502,8 @@ function updateUI(
   const hourlyData = prepareHourlySummary(sessionLog);
   drawHourlyChart(hourlyData);
   drawPatternChart(sessionLog);
-  drawPeakChart(sessionLog); 
+  drawPeakChart(sessionLog);
+  drawMovementChart(sessionLog);
 }
 
 function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
@@ -711,21 +713,27 @@ function drawHourlyChart(hourlyData) {
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
-    
+
     // ─── Legend ────────────────────────────────────────────────────────────────
-    const legend = svg.append("g")
-      .attr("transform", `translate(${margin.left},${height - margin.bottom + 40})`);
+    const legend = svg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${margin.left},${height - margin.bottom + 40})`
+      );
 
     keys.forEach((key, i) => {
       const x0 = i * 120;
       // color box
-      legend.append("rect")
+      legend
+        .append("rect")
         .attr("x", x0)
         .attr("width", 12)
         .attr("height", 12)
         .attr("fill", color(key));
       // label
-      legend.append("text")
+      legend
+        .append("text")
         .attr("x", x0 + 18)
         .attr("y", 10)
         .text(key)
@@ -749,101 +757,129 @@ function drawPatternChart(sessionLog) {
 
     // Parse times
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
-    const data = sessionLog.map((d) => {
-      const t = parseTime(d.startTime);
-      return {
-        timeOfDay: new Date(1970, 0, 1, t.getHours(), t.getMinutes(), t.getSeconds()),
-        location: d.location,
-      };
-    }).sort((a, b) => a.timeOfDay - b.timeOfDay);
+    const data = sessionLog
+      .map((d) => {
+        const t = parseTime(d.startTime);
+        return {
+          timeOfDay: new Date(
+            1970,
+            0,
+            1,
+            t.getHours(),
+            t.getMinutes(),
+            t.getSeconds()
+          ),
+          location: d.location,
+        };
+      })
+      .sort((a, b) => a.timeOfDay - b.timeOfDay);
 
     // X scale
-    const x = d3.scaleTime()
-      .domain([new Date(1970,0,1,0,0,0), new Date(1970,0,1,23,59,59)])
+    const x = d3
+      .scaleTime()
+      .domain([new Date(1970, 0, 1, 0, 0, 0), new Date(1970, 0, 1, 23, 59, 59)])
       .range([margin.left, width - margin.right]);
 
     // Y scale (Bed → Window → Food)
-    const locations = ["Bed","Window","Food"];
-    const y = d3.scalePoint()
+    const locations = ["Bed", "Window", "Food"];
+    const y = d3
+      .scalePoint()
       .domain(locations)
       .range([margin.top, height - margin.bottom])
       .padding(0.5);
 
     // Color scale must match `locations`
-    const color = d3.scaleOrdinal()
+    const color = d3
+      .scaleOrdinal()
       .domain(locations)
       .range(["#D390CE", "#60D1DB", "#F5AB54"]);
 
-    const svg = d3.select("#pattern-chart")
+    const svg = d3
+      .select("#pattern-chart")
       .append("svg")
-      .attr("width","100%")
-      .attr("viewBox",`0 0 ${width} ${height}`)
-      .attr("height",height);
+      .attr("width", "100%")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("height", height);
 
     // Line generator
-    const line = d3.line()
-      .x(d => x(d.timeOfDay))
-      .y(d => y(d.location))
+    const line = d3
+      .line()
+      .x((d) => x(d.timeOfDay))
+      .y((d) => y(d.location))
       .curve(d3.curveMonotoneX);
 
     // Draw the line
-    const path = svg.append("path")
+    const path = svg
+      .append("path")
       .datum(data)
-      .attr("fill","none")
-      .attr("stroke","#666")
-      .attr("stroke-width",1)
-      .attr("d",line);
+      .attr("fill", "none")
+      .attr("stroke", "#666")
+      .attr("stroke-width", 1)
+      .attr("d", line);
 
     // Animate line
     const totalLen = path.node().getTotalLength();
     path
-      .attr("stroke-dasharray",`${totalLen} ${totalLen}`)
+      .attr("stroke-dasharray", `${totalLen} ${totalLen}`)
       .attr("stroke-dashoffset", totalLen)
-      .transition().duration(3000).ease(d3.easeLinear)
+      .transition()
+      .duration(3000)
+      .ease(d3.easeLinear)
       .attr("stroke-dashoffset", 0);
 
     // Draw the circles
-    svg.append("g")
+    svg
+      .append("g")
       .selectAll("circle")
       .data(data)
       .join("circle")
-        .attr("cx", d => x(d.timeOfDay))
-        .attr("cy", d => y(d.location))
-        .attr("r", 3)
-        .attr("fill", d => color(d.location));
+      .attr("cx", (d) => x(d.timeOfDay))
+      .attr("cy", (d) => y(d.location))
+      .attr("r", 3)
+      .attr("fill", (d) => color(d.location));
 
     // X Axis
-    svg.append("g")
-      .attr("transform",`translate(0,${height - margin.bottom})`)
-      .call(d3.axisBottom(x)
-        .ticks(d3.timeHour.every(1))
-        .tickFormat(d3.timeFormat("%H:%M"))
+    svg
+      .append("g")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(
+        d3
+          .axisBottom(x)
+          .ticks(d3.timeHour.every(1))
+          .tickFormat(d3.timeFormat("%H:%M"))
       );
 
     // Y Axis
-    svg.append("g")
-      .attr("transform",`translate(${margin.left},0)`)
+    svg
+      .append("g")
+      .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
 
     // ─── Legend ────────────────────────────────────────────────────────────────
-    const legend = svg.append("g")
-      .attr("transform", `translate(${margin.left},${height - margin.bottom + 40})`);
+    const legend = svg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${margin.left},${height - margin.bottom + 40})`
+      );
 
     locations.forEach((loc, i) => {
       const x0 = i * 140;
       // colored circle
-      legend.append("circle")
+      legend
+        .append("circle")
         .attr("cx", x0)
         .attr("cy", 0)
         .attr("r", 6)
         .attr("fill", color(loc));
       // label
-      legend.append("text")
+      legend
+        .append("text")
         .attr("x", x0 + 12)
         .attr("y", 0)
         .text(loc)
-        .style("font-size","12px")
-        .attr("alignment-baseline","middle");
+        .style("font-size", "12px")
+        .attr("alignment-baseline", "middle");
     });
 
     resolve();
@@ -852,13 +888,13 @@ function drawPatternChart(sessionLog) {
 
 async function drawPeakChart(sessionLog) {
   // 1) Aggregate total duration per hour for each location
-  const locations = ["Bed","Window","Food"];
+  const locations = ["Bed", "Window", "Food"];
   const parse = d3.timeParse("%Y-%m-%d %H:%M:%S");
   const hourlyByLoc = {};
-  locations.forEach(loc => {
+  locations.forEach((loc) => {
     hourlyByLoc[loc] = Array.from({ length: 24 }, () => 0);
   });
-  sessionLog.forEach(d => {
+  sessionLog.forEach((d) => {
     const dt = parse(d.startTime);
     if (dt && hourlyByLoc[d.location] !== undefined) {
       hourlyByLoc[d.location][dt.getHours()] += d.durationSeconds;
@@ -867,7 +903,7 @@ async function drawPeakChart(sessionLog) {
 
   // 2) Flatten into a data array
   const heatmapData = [];
-  locations.forEach(loc => {
+  locations.forEach((loc) => {
     hourlyByLoc[loc].forEach((val, h) => {
       heatmapData.push({ location: loc, hour: h, value: val });
     });
@@ -876,53 +912,61 @@ async function drawPeakChart(sessionLog) {
   // 3) Clear & set SVG dimensions
   d3.select("#peak-chart").html("");
   const container = document.getElementById("peak-chart");
-  const width  = container.clientWidth || 800;
+  const width = container.clientWidth || 800;
   const height = 220;
   const margin = { top: 40, right: 20, bottom: 60, left: 80 };
   const cellSize = (width - margin.left - margin.right) / 24;
 
   // 4) Scales
-  const x = d3.scaleBand()
+  const x = d3
+    .scaleBand()
     .domain(d3.range(24))
-    .range([margin.left, margin.left + 24*cellSize]);
-  const y = d3.scaleBand()
+    .range([margin.left, margin.left + 24 * cellSize]);
+  const y = d3
+    .scaleBand()
     .domain(locations)
-    .range([margin.top, margin.top + locations.length*cellSize])
+    .range([margin.top, margin.top + locations.length * cellSize])
     .paddingInner(0.1);
-  const maxVal = d3.max(heatmapData, d => d.value);
-  const color = d3.scaleLinear()
-  .domain([0, maxVal])
-  .range(["#DED9D3", "#ee5a36"]);
+  const maxVal = d3.max(heatmapData, (d) => d.value);
+  const color = d3
+    .scaleLinear()
+    .domain([0, maxVal])
+    .range(["#DED9D3", "#ee5a36"]);
 
   // 5) Create SVG
-  const svg = d3.select("#peak-chart")
+  const svg = d3
+    .select("#peak-chart")
     .append("svg")
     .attr("width", "100%")
     .attr("viewBox", `0 0 ${width} ${height}`)
     .attr("height", height);
 
   // 6) Draw heat cells
-  svg.append("g")
+  svg
+    .append("g")
     .selectAll("rect")
     .data(heatmapData)
     .join("rect")
-      .attr("class", "cell")
-      .attr("x", d => x(d.hour))
-      .attr("y", d => y(d.location))
-      .attr("width",  cellSize)
-      .attr("height", cellSize)
-      .attr("fill", d => color(d.value));
+    .attr("class", "cell")
+    .attr("x", (d) => x(d.hour))
+    .attr("y", (d) => y(d.location))
+    .attr("width", cellSize)
+    .attr("height", cellSize)
+    .attr("fill", (d) => color(d.value));
 
   // 7) X‑axis (hours)
-  svg.append("g")
-      .attr("transform", `translate(0,${margin.top - 5})`)
-      .call(d3.axisTop(x)
-        .tickValues(d3.range(0,24,2))
-        .tickFormat(d => d3.format("02")(d) + ":00")
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${margin.top - 5})`)
+    .call(
+      d3
+        .axisTop(x)
+        .tickValues(d3.range(0, 24, 2))
+        .tickFormat((d) => d3.format("02")(d) + ":00")
         .tickSizeOuter(0)
-      )
+    )
     .selectAll("text")
-      .style("font-size","12px");
+    .style("font-size", "12px");
 
   // svg.append("text")
   //     .attr("x", margin.left + (24*cellSize)/2)
@@ -932,11 +976,12 @@ async function drawPeakChart(sessionLog) {
   //     .text("Hour of Day");
 
   // 8) Y‑axis (locations)
-  svg.append("g")
-      .attr("transform", `translate(${margin.left - 5},0)`)
-      .call(d3.axisLeft(y).tickSizeOuter(0))
+  svg
+    .append("g")
+    .attr("transform", `translate(${margin.left - 5},0)`)
+    .call(d3.axisLeft(y).tickSizeOuter(0))
     .selectAll("text")
-      .style("font-size","12px");
+    .style("font-size", "12px");
 
   // svg.append("text")
   //     .attr("transform","rotate(-90)")
@@ -949,138 +994,167 @@ async function drawPeakChart(sessionLog) {
   // 9) Legend (gradient + axis)
   const legendWidth = 400;
   const legendHeight = 10;
-  const legendScale = d3.scaleLinear()
-      .domain([0, maxVal])
-      .range([0, legendWidth]);
-  const legendAxis = d3.axisBottom(legendScale)
-      .ticks(5)
-      .tickFormat(d => (d/60).toFixed(1) + " min");
+  const legendScale = d3
+    .scaleLinear()
+    .domain([0, maxVal])
+    .range([0, legendWidth]);
+  const legendAxis = d3
+    .axisBottom(legendScale)
+    .ticks(5)
+    .tickFormat((d) => (d / 60).toFixed(1) + " min");
 
   const defs = svg.append("defs");
-  const grad = defs.append("linearGradient").attr("id","grad-peak");
-  grad.selectAll("stop")
-    .data(d3.range(0,1.01,0.1))
-    .enter().append("stop")
-      .attr("offset", t => t)
-      .attr("stop-color", t => color(t * maxVal));
+  const grad = defs.append("linearGradient").attr("id", "grad-peak");
+  grad
+    .selectAll("stop")
+    .data(d3.range(0, 1.01, 0.1))
+    .enter()
+    .append("stop")
+    .attr("offset", (t) => t)
+    .attr("stop-color", (t) => color(t * maxVal));
 
-  const legend = svg.append("g")
-      .attr("transform", `translate(${width - margin.right - legendWidth}, ${height - 40})`);
+  const legend = svg
+    .append("g")
+    .attr(
+      "transform",
+      `translate(${width - margin.right - legendWidth}, ${height - 40})`
+    );
 
-  legend.append("rect")
-      .attr("width", legendWidth)
-      .attr("height", legendHeight)
-      .style("fill", "url(#grad-peak)");
+  legend
+    .append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .style("fill", "url(#grad-peak)");
 
-  legend.append("g")
-      .attr("transform", `translate(0,${legendHeight})`)
-      .call(legendAxis)
+  legend
+    .append("g")
+    .attr("transform", `translate(0,${legendHeight})`)
+    .call(legendAxis)
     .selectAll("text")
-      .style("font-size","12px");
+    .style("font-size", "12px");
 
-  legend.append("text")
-      .attr("x", legendWidth/2)
-      .attr("y", legendHeight + 30)
-      .attr("text-anchor","middle")
-      .style("font-size","12px")
-      .text("Total Duration");
+  legend
+    .append("text")
+    .attr("x", legendWidth / 2)
+    .attr("y", legendHeight + 30)
+    .attr("text-anchor", "middle")
+    .style("font-size", "12px")
+    .text("Total Duration");
 
   resolve();
 }
 
 async function drawMovementChart(sessionLog) {
-  // 1) Clear and size the SVG
+  // clear out any old diagram
   d3.select("#movement-chart").html("");
+
+  // sizing
   const container = document.getElementById("movement-chart");
-  const width  = container.clientWidth  || 600;
+  const width = container.clientWidth || 600;
   const height = container.clientHeight || 600;
   const innerRadius = Math.min(width, height) * 0.4;
   const outerRadius = innerRadius * 1.1;
 
-  const svg = d3.select("#movement-chart")
+  // SVG + group centered
+  const svg = d3
+    .select("#movement-chart")
     .append("svg")
-      .attr("width",  "100%")
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("height", height)
+    .attr("width", "100%")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("height", height)
     .append("g")
-      .attr("transform", `translate(${width/2},${height/2})`);
+    .attr("transform", `translate(${width / 2},${height / 2})`);
+const tooltip = d3.select("#tooltip");
+  // 1) build a 3×3 transition count matrix
+  const locs = ["Bed", "Food", "Window"];
+  const idx = { Bed: 0, Food: 1, Window: 2 };
+  const matrix = Array.from({ length: 3 }, () => [0, 0, 0]);
 
-  // 2) Compute the transition matrix
-  const locs = ["Bed","Food","Window"];
-  const idx = { Bed:0, Food:1, Window:2 };
-  const matrix = Array.from({ length: 3 }, () => [0,0,0]);
-
-  // sort sessions by time
+  // sort by timestamp
   const parse = d3.timeParse("%Y-%m-%d %H:%M:%S");
   const sorted = sessionLog
-    .map(d => ({ ...d, date: parse(d.startTime) }))
-    .sort((a,b) => a.date - b.date);
+    .map((d) => ({ ...d, date: parse(d.startTime) }))
+    .sort((a, b) => a.date - b.date);
 
   for (let i = 1; i < sorted.length; i++) {
-    const from = sorted[i-1].location;
-    const to   = sorted[i].location;
-    if (from !== to && idx[from] !== undefined && idx[to] !== undefined) {
-      matrix[idx[from]][idx[to]] += 1;
-    }
+    const from = sorted[i - 1].location;
+    const to = sorted[i].location;
+    if (from !== to) matrix[idx[from]][idx[to]]++;
   }
 
-  // 3) Chord layout
-  const chord = d3.chordDirected()
-    .padAngle(0.05)
-    .sortSubgroups(d3.descending)
-    (matrix);
+  // 2) chord layout
+  const chord = d3.chordDirected().padAngle(0.05).sortSubgroups(d3.descending)(
+    matrix
+  );
 
-  const arc = d3.arc()
-    .innerRadius(innerRadius)
-    .outerRadius(outerRadius);
-
-  const ribbon = d3.ribbonDirected()
+  // 3) arc + ribbon generators
+  const arc = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+  const ribbon = d3
+    .ribbonArrow() // ← use ribbonArrow, not ribbonDirected
     .radius(innerRadius);
 
-  const color = d3.scaleOrdinal()
-    .domain([0,1,2])
-    .range(["#D390CE","#F5AB54","#60D1DB"]);
+  // 4) color scale
+  const color = d3
+    .scaleOrdinal()
+    .domain([0, 1, 2])
+    .range(["#D390CE", "#F5AB54", "#60D1DB"]);
 
-  // 4) Draw the outer arcs (groups)
-  const group = svg.append("g")
-    .selectAll("g")
-    .data(chord.groups)
-    .join("g");
+  // 5) draw outer arcs
+  const group = svg.append("g").selectAll("g").data(chord.groups).join("g");
 
-  group.append("path")
-    .attr("fill", d => color(d.index))
-    .attr("stroke", d => d3.rgb(color(d.index)).darker())
-    .attr("d", arc);
+  group
+    .append("path")
+    .attr("d", arc)
+    .attr("fill", (d) => color(d.index))
+    .attr("stroke", (d) => d3.rgb(color(d.index)).darker());
 
-  // 5) Add labels at the group edges
-  group.append("text")
-    .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+  // 6) group labels
+  group
+    .append("text")
+    .each((d) => (d.angle = (d.startAngle + d.endAngle) / 2))
     .attr("dy", "0.35em")
-    .attr("transform", d => `
-      rotate(${(d.angle * 180/Math.PI - 90)})
-      translate(${outerRadius + 5})
-      ${d.angle > Math.PI ? "rotate(180)" : ""}
-    `)
-    .attr("text-anchor", d => d.angle > Math.PI ? "end" : null)
-    .text(d => locs[d.index]);
+    .attr(
+      "transform",
+      (d) => `
+        rotate(${(d.angle * 180) / Math.PI - 90})
+        translate(${outerRadius + 5})
+        ${d.angle > Math.PI ? "rotate(180)" : ""}
+      `
+    )
+    .attr("text-anchor", (d) => (d.angle > Math.PI ? "end" : "start"))
+    .text((d) => locs[d.index]);
 
-  // 6) Draw the directed ribbons (chords)
-  svg.append("g")
-    .selectAll("path")
-    .data(chord)
-    .join("path")
-      .attr("fill", d => color(d.source.index))
-      .attr("stroke", d => d3.rgb(color(d.source.index)).darker())
-      .attr("d", ribbon);
+  // 7) draw the directed ribbons
+svg.append("g")
+  .selectAll("path")
+  .data(chord)
+  .join("path")
+    .attr("d", ribbon)
+    .attr("fill", d => color(d.source.index))
+    .attr("stroke", d => d3.rgb(color(d.source.index)).darker())
+    .attr("fill-opacity", 0.5)
+    .attr("stroke-opacity", 0.5)
+    .on("mouseover", (event, d) => {
+      // show tooltip with count
+      tooltip
+        .style("display", "block")
+        .html(`
+          <strong>${locs[d.source.index]} → ${locs[d.target.index]}</strong><br/>
+          ${d.source.value} moves
+        `);
+    })
+    .on("mousemove", (event) => {
+      tooltip
+        .style("left",  (event.pageX + 10) + "px")
+        .style("top",   (event.pageY + 10) + "px");
+    })
+    .on("mouseout", () => {
+      tooltip.style("display", "none");
+    });
 
-  // 7) (Optional) Add a neutral center circle
-  svg.append("circle")
-    .attr("r", innerRadius * 0.02)
-    .attr("fill", "none");
 
-  // Done
+  // done
 }
-
 
 setInterval(fetchCatData, 3000);
 fetchCatData();

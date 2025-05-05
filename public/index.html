@@ -70,117 +70,16 @@
       </div>
 
       <h1 class="history-title">Daily Data Log</h1>
-      <div class="dropdown-wrapper">
-        <a
-          href="https://docs.google.com/spreadsheets/d/17aL1__xPNod67q9L5ZGPEh77C9wXszXF-0lPlto_fgY/edit?usp=sharing"
-          target="_blank"
-          class="dropdown-button"
-          >Raw Data</a
-        >
-
-        <select id="date-filter">
-          <option value="">Select Date</option>
-        </select>
-      </div>
-
-      <div class="log-section">
-        <div class="log-box">
-          <h3>Duration Log</h3>
-          <div id="session-chart"></div>
-        </div>
-        <div class="log-box">
-          <h3>Hourly Percentage</h3>
-          <div id="hourly-chart"></div>
-        </div>
-        <div class="log-box">
-          <h3>Peak Active Hours</h3>
-          <div id="peak-chart"></div>
-        </div>
-        <div class="log-box">
-          <h3>Movement Pattern</h3>
-          <div id="pattern-chart"></div>
-        </div>
-        <div class="log-box">
-          <h3>Peak Movement Pattern</h3>
-          <div id="movement-chart"></div>
-        </div>
-      </div>
-    </div>
-    <script src="script.js"></script>
-  </body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Where is my cat now?</title>
-    <link rel="stylesheet" href="style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bellota:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400..800&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Marvel:ital,wght@0,400;0,700;1,400;1,700&family=Petit+Formal+Script&display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-  </head>
-  <body>
-    <div class="container">
-      <!-- Initial Full Page Loading -->
-      <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-box">
-          <span class="blink">🐾</span><br />
-          Loading...
-        </div>
-      </div>
-
-      <!-- Day Switch Loading -->
-      <div id="switching-overlay" class="loading-overlay">
-        <div class="loading-box">
-          <span class="blink">🐾</span><br />
-          Switching dataset...
-        </div>
-      </div>
-      <h1>Where is my cat now?</h1>
-
-      <div class="status-section">
-        <div class="status-box active" id="cat-bed">
-          <div class="icon">🛏️</div>
-          <h2>CAT BED</h2>
-          <p>
-            Current status:<br />
-            Last active:<br />
-            Duration:<br />
-          </p>
-        </div>
-        <div class="status-box" id="food-bowl">
-          <div class="icon">🥣</div>
-          <h2>FOOD BOWL</h2>
-          <p>
-            Current status:<br />
-            Last active:<br />
-            Duration:<br />
-          </p>
-        </div>
-        <div class="status-box" id="window">
-          <div class="icon">🪟</div>
-          <h2>WINDOW</h2>
-          <p>
-            Current status:<br />
-            Last active:<br />
-            Duration:<br />
-          </p>
-        </div>
-      </div>
-
-      <h1 class="history-title">Daily Data Log</h1>
+      <div id="tooltip" style="
+  position: absolute;
+  pointer-events: none;
+  padding: 4px 8px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  display: none;
+"></div>
       <div class="dropdown-wrapper">
         <a
           href="https://docs.google.com/spreadsheets/d/17aL1__xPNod67q9L5ZGPEh77C9wXszXF-0lPlto_fgY/edit?usp=sharing"
