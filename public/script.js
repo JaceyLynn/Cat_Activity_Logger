@@ -2,8 +2,8 @@
 //   "https://script.google.com/macros/s/AKfycbxn9-kXI1Vsmi_SvtI5M52terMvXbNspXr8HHrFdVRfxBTofhsmB6uXpT_wClNc9sNW-g/exec";
 
 let currentSessionLog = [];
-let isUserSwitchingDate = false;
 let hasInitialLoadCompleted = false;
+let isUserSwitchingDate   = false;
 let isUserSwitchingWeekly = false;
 
 async function populateDateFilter() {
@@ -29,29 +29,18 @@ async function populateDateFilter() {
   }
 }
 
-document.getElementById("weekly-filter").addEventListener("change", async (e) => {
-  const weekKey = e.target.value; // "thisWeek" or "lastWeek" or ""
-  if (!weekKey) {
-    // user cleared it, go back to live
+const weeklySelect = document.getElementById("weekly-filter");
+console.log("weeklySelect element is:", weeklySelect);
+
+weeklySelect.addEventListener("change", (e) => {
+  console.log("▶️ weekly-filter changed to:", e.target.value);
+  const v = e.target.value;
+  if (!v) {
     isUserSwitchingWeekly = false;
     return;
   }
-
-  // block live‑polling & daily‑fetch
-  isUserSwitchingWeekly = true;
-  showWeeklyLoading();    // your new weekly overlay
-
-  try {
-    // fetchWeeklyData should compute sessionLog & redraw
-    await fetchWeeklyData(weekKey);
-  } catch (err) {
-    console.error("Weekly data error:", err);
-  } finally {
-    hideWeeklyLoading();
-    isUserSwitchingWeekly = false;
-  }
+  fetchWeeklyData(v);
 });
-
 
 let loadingTimeout;
 
@@ -82,6 +71,7 @@ async function fetchCatData() {
   
   try {
     if (isUserSwitchingDate || isUserSwitchingWeekly) return;
+    console.log("⏱ fetchCatData: switching?[date,weekly] =", isUserSwitchingDate, isUserSwitchingWeekly);
 
     if (isInitialLoad) showInitialLoading();
 
@@ -431,7 +421,9 @@ async function fetchChartDataOnly(selectedDate) {
     hideSwitchingLoading(); // ✅ Hide when charts are ready
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
+  } finally {
     hideSwitchingLoading();
+    isUserSwitchingDate = false;
   }
 }
 
@@ -476,11 +468,12 @@ function computeSessionLog(data) {
   return sessionLog;
 }
 
-let isWeekly = false;
+
 async function fetchWeeklyData(weekKey) {
-  
+  console.log("🔄 fetchWeeklyData called with:", weekKey);
   try {
-    isWeekly = true;
+    // block both real‑time and daily while we load weekly
+    isUserSwitchingWeekly = true;
     showWeeklyLoading();
 
     // 1) get all date‑tabs
@@ -529,11 +522,11 @@ async function fetchWeeklyData(weekKey) {
     // 7) redraw all five charts with weeklyLog
     await updateCharts(weeklyLog);
 
-  } catch(err) {
-    console.error("Weekly data error:", err);
+  } catch (err) {
+    console.error("Error fetching weekly data:", err);
   } finally {
     hideWeeklyLoading();
-    isWeekly = false;
+    isUserSwitchingWeekly = false;
   }
 }
 
