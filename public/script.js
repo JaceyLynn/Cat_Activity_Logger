@@ -988,6 +988,99 @@ async function drawPeakChart(sessionLog) {
   resolve();
 }
 
+async function drawMovementChart(sessionLog) {
+  // 1) Clear and size the SVG
+  d3.select("#movement-chart").html("");
+  const container = document.getElementById("movement-chart");
+  const width  = container.clientWidth  || 600;
+  const height = container.clientHeight || 600;
+  const innerRadius = Math.min(width, height) * 0.4;
+  const outerRadius = innerRadius * 1.1;
+
+  const svg = d3.select("#movement-chart")
+    .append("svg")
+      .attr("width",  "100%")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("height", height)
+    .append("g")
+      .attr("transform", `translate(${width/2},${height/2})`);
+
+  // 2) Compute the transition matrix
+  const locs = ["Bed","Food","Window"];
+  const idx = { Bed:0, Food:1, Window:2 };
+  const matrix = Array.from({ length: 3 }, () => [0,0,0]);
+
+  // sort sessions by time
+  const parse = d3.timeParse("%Y-%m-%d %H:%M:%S");
+  const sorted = sessionLog
+    .map(d => ({ ...d, date: parse(d.startTime) }))
+    .sort((a,b) => a.date - b.date);
+
+  for (let i = 1; i < sorted.length; i++) {
+    const from = sorted[i-1].location;
+    const to   = sorted[i].location;
+    if (from !== to && idx[from] !== undefined && idx[to] !== undefined) {
+      matrix[idx[from]][idx[to]] += 1;
+    }
+  }
+
+  // 3) Chord layout
+  const chord = d3.chordDirected()
+    .padAngle(0.05)
+    .sortSubgroups(d3.descending)
+    (matrix);
+
+  const arc = d3.arc()
+    .innerRadius(innerRadius)
+    .outerRadius(outerRadius);
+
+  const ribbon = d3.ribbonDirected()
+    .radius(innerRadius);
+
+  const color = d3.scaleOrdinal()
+    .domain([0,1,2])
+    .range(["#D390CE","#F5AB54","#60D1DB"]);
+
+  // 4) Draw the outer arcs (groups)
+  const group = svg.append("g")
+    .selectAll("g")
+    .data(chord.groups)
+    .join("g");
+
+  group.append("path")
+    .attr("fill", d => color(d.index))
+    .attr("stroke", d => d3.rgb(color(d.index)).darker())
+    .attr("d", arc);
+
+  // 5) Add labels at the group edges
+  group.append("text")
+    .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+    .attr("dy", "0.35em")
+    .attr("transform", d => `
+      rotate(${(d.angle * 180/Math.PI - 90)})
+      translate(${outerRadius + 5})
+      ${d.angle > Math.PI ? "rotate(180)" : ""}
+    `)
+    .attr("text-anchor", d => d.angle > Math.PI ? "end" : null)
+    .text(d => locs[d.index]);
+
+  // 6) Draw the directed ribbons (chords)
+  svg.append("g")
+    .selectAll("path")
+    .data(chord)
+    .join("path")
+      .attr("fill", d => color(d.source.index))
+      .attr("stroke", d => d3.rgb(color(d.source.index)).darker())
+      .attr("d", ribbon);
+
+  // 7) (Optional) Add a neutral center circle
+  svg.append("circle")
+    .attr("r", innerRadius * 0.02)
+    .attr("fill", "none");
+
+  // Done
+}
+
 
 setInterval(fetchCatData, 3000);
 fetchCatData();
