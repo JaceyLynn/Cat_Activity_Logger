@@ -457,8 +457,11 @@ function computeSessionLog(data) {
   return sessionLog;
 }
 
+let isWeekly = false;
 async function fetchWeeklyData(weekKey) {
+  
   try {
+    isWeekly = true;
     showWeeklyLoading();
 
     // 1) get all date‑tabs
@@ -511,6 +514,7 @@ async function fetchWeeklyData(weekKey) {
     console.error("Weekly data error:", err);
   } finally {
     hideWeeklyLoading();
+    isWeekly = false;
   }
 }
 
@@ -646,6 +650,23 @@ function drawSessionChart(sessionLog) {
     const margin = { top: 20, right: 30, bottom: 60, left: 60 };
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
+    
+       // For weekly mode, remap startTimes to time‐of‐day
+    let points = sessionLog.map(d => {
+      const dt = parseTime(d.startTime);
+      return isWeekly
+        ? { startTime: new Date(1970,0,1,dt.getHours(),dt.getMinutes(),dt.getSeconds()), duration: d.durationSeconds, loc: d.location }
+        : { startTime: dt, duration: d.durationSeconds, loc: d.location };
+    }).filter(d => d.startTime && d.duration > 0);
+
+    // X‐scale:
+    const x = isWeekly
+      ? d3.scaleTime()
+          .domain([new Date(1970,0,1,0,0,0), new Date(1970,0,1,23,59,59)])
+          .range([margin.left, width - margin.right])
+      : d3.scaleTime()
+          .domain(d3.extent(points, d => d.startTime))
+          .range([margin.left, width - margin.right]);
 
     const data = sessionLog.map((d) => ({
       startTime: parseTime(d.startTime),
@@ -656,12 +677,6 @@ function drawSessionChart(sessionLog) {
     const cleanedData = data.filter(
       (d) => d.startTime && d.durationSeconds > 0 && d.location
     );
-
-    // X: start time scale
-    const x = d3
-      .scaleTime()
-      .domain(d3.extent(cleanedData, (d) => d.startTime))
-      .range([margin.left, width - margin.right]);
 
     // Y: session duration using log scale
     const y = d3
@@ -863,139 +878,118 @@ function drawHourlyChart(hourlyData) {
 
 function drawPatternChart(sessionLog) {
   return new Promise((resolve) => {
-    // Clear previous chart
-    d3.select("#pattern-chart").html("");
+    d3.select("#pattern-chart").html(""); // Clear previous chart
 
     const container = document.getElementById("pattern-chart");
     const width = container.clientWidth || 1000;
     const height = 200;
     const margin = { top: 20, right: 30, bottom: 60, left: 80 };
 
-    // Parse times
+    // 1) parse timestamps & map to either full Date or time‑of‑day
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
     const data = sessionLog
       .map((d) => {
-        const t = parseTime(d.startTime);
+        const dt = parseTime(d.startTime);
         return {
-          timeOfDay: new Date(
-            1970,
-            0,
-            1,
-            t.getHours(),
-            t.getMinutes(),
-            t.getSeconds()
-          ),
+          original: dt,
+          timeOfDay: new Date(1970, 0, 1, dt.getHours(), dt.getMinutes(), dt.getSeconds()),
           location: d.location,
         };
       })
-      .sort((a, b) => a.timeOfDay - b.timeOfDay);
+      .sort((a, b) => {
+        // sort by whichever field we’re going to plot
+        return (isWeekly ? a.timeOfDay : a.original) - (isWeekly ? b.timeOfDay : b.original);
+      });
 
-    // X scale
-    const x = d3
-      .scaleTime()
-      .domain([new Date(1970, 0, 1, 0, 0, 0), new Date(1970, 0, 1, 23, 59, 59)])
-      .range([margin.left, width - margin.right]);
+    // 2) X scale: either full‑date extent or fixed 24h
+    const x = isWeekly
+      ? d3.scaleTime()
+          .domain([ new Date(1970,0,1,0,0,0), new Date(1970,0,1,23,59,59) ])
+          .range([margin.left, width - margin.right])
+      : d3.scaleTime()
+          .domain(d3.extent(data, d => d.original))
+          .range([margin.left, width - margin.right]);
 
-    // Y scale (Bed → Window → Food)
+    // 3) Y / color / shape as before
     const locations = ["Bed", "Window", "Food"];
-    const y = d3
-      .scalePoint()
+    const y = d3.scalePoint()
       .domain(locations)
       .range([margin.top, height - margin.bottom])
       .padding(0.5);
 
-    // Color scale must match `locations`
-    const color = d3
-      .scaleOrdinal()
+    const color = d3.scaleOrdinal()
       .domain(locations)
       .range(["#D390CE", "#60D1DB", "#F5AB54"]);
 
-    const svg = d3
-      .select("#pattern-chart")
+    // 4) build SVG
+    const svg = d3.select("#pattern-chart")
       .append("svg")
-      .attr("width", "100%")
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("height", height);
+      .attr("width","100%")
+      .attr("viewBox",`0 0 ${width} ${height}`)
+      .attr("height",height);
 
-    // Line generator
-    const line = d3
-      .line()
-      .x((d) => x(d.timeOfDay))
-      .y((d) => y(d.location))
+    // 5) line generator picks the correct field
+    const line = d3.line()
+      .x(d => x(isWeekly ? d.timeOfDay : d.original))
+      .y(d => y(d.location))
       .curve(d3.curveMonotoneX);
 
-    // Draw the line
-    const path = svg
-      .append("path")
+    // 6) draw & animate path
+    const path = svg.append("path")
       .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", "#666")
-      .attr("stroke-width", 1)
-      .attr("d", line);
+      .attr("fill","none")
+      .attr("stroke","#666")
+      .attr("stroke-width",1)
+      .attr("d",line);
 
-    // Animate line
     const totalLen = path.node().getTotalLength();
     path
       .attr("stroke-dasharray", `${totalLen} ${totalLen}`)
       .attr("stroke-dashoffset", totalLen)
-      .transition()
-      .duration(3000)
-      .ease(d3.easeLinear)
+      .transition().duration(3000).ease(d3.easeLinear)
       .attr("stroke-dashoffset", 0);
 
-    // Draw the circles
-    svg
-      .append("g")
+    // 7) draw circles
+    svg.append("g")
       .selectAll("circle")
       .data(data)
       .join("circle")
-      .attr("cx", (d) => x(d.timeOfDay))
-      .attr("cy", (d) => y(d.location))
-      .attr("r", 3)
-      .attr("fill", (d) => color(d.location));
+        .attr("cx", d => x(isWeekly ? d.timeOfDay : d.original))
+        .attr("cy", d => y(d.location))
+        .attr("r", 3)
+        .attr("fill", d => color(d.location));
 
-    // X Axis
-    svg
-      .append("g")
+    // 8) X axis
+    svg.append("g")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(
-        d3
-          .axisBottom(x)
-          .ticks(d3.timeHour.every(1))
-          .tickFormat(d3.timeFormat("%H:%M"))
+        d3.axisBottom(x)
+          .ticks(isWeekly ? d3.timeHour.every(1) : width / 80)
+          .tickFormat(isWeekly ? d3.timeFormat("%H:%M") : null)
+          .tickSizeOuter(0)
       );
 
-    // Y Axis
-    svg
-      .append("g")
+    // 9) Y axis
+    svg.append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
 
-    // ─── Legend ────────────────────────────────────────────────────────────────
-    const legend = svg
-      .append("g")
-      .attr(
-        "transform",
-        `translate(${margin.left},${height - margin.bottom + 40})`
-      );
-
+    // 10) legend (unchanged)
+    const legend = svg.append("g")
+      .attr("transform", `translate(${margin.left},${height - margin.bottom + 40})`);
     locations.forEach((loc, i) => {
-      const x0 = i * 140;
-      // colored circle
-      legend
-        .append("circle")
+      const x0 = i * ((width - margin.left - margin.right) / locations.length);
+      legend.append("circle")
         .attr("cx", x0)
         .attr("cy", 0)
         .attr("r", 6)
         .attr("fill", color(loc));
-      // label
-      legend
-        .append("text")
+      legend.append("text")
         .attr("x", x0 + 12)
         .attr("y", 0)
         .text(loc)
-        .style("font-size", "12px")
-        .attr("alignment-baseline", "middle");
+        .style("font-size","12px")
+        .attr("alignment-baseline","middle");
     });
 
     resolve();
