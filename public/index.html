@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Where is my cat now?</title>
+    <title>Realtime Cat Tracker</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,7 +34,14 @@
       <div id="switching-overlay" class="loading-overlay">
         <div class="loading-box">
           <span class="blink">🐾</span><br />
-          Switching dataset...
+          Switching Daily Dataset...
+        </div>
+      </div>
+      <!-- week Switch Loading -->
+      <div id="weekly-overlay" class="loading-overlay">
+        <div class="loading-box">
+          <span class="blink">🐾</span><br />
+          Loading Weekly Data...
         </div>
       </div>
       <h1>Where is my cat now?</h1>
@@ -70,16 +77,19 @@
       </div>
 
       <h1 class="history-title">Daily Data Log</h1>
-      <div id="tooltip" style="
-  position: absolute;
-  pointer-events: none;
-  padding: 4px 8px;
-  background: rgba(255,255,255,0.9);
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 12px;
-  display: none;
-"></div>
+      <div
+        id="tooltip"
+        style="
+          position: absolute;
+          pointer-events: none;
+          padding: 4px 8px;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 12px;
+          display: none;
+        "
+      ></div>
       <div class="dropdown-wrapper">
         <a
           href="https://docs.google.com/spreadsheets/d/17aL1__xPNod67q9L5ZGPEh77C9wXszXF-0lPlto_fgY/edit?usp=sharing"
@@ -90,6 +100,11 @@
 
         <select id="date-filter">
           <option value="">Select Date</option>
+        </select>
+        <select id="weekly-filter">
+          <option value="">Week Filter</option>
+          <option value="thisWeek">This Week</option>
+          <option value="lastWeek">Last Week</option>
         </select>
       </div>
 
@@ -107,11 +122,11 @@
           <div id="peak-chart"></div>
         </div>
         <div class="log-box">
-          <h3>Movement Pattern</h3>
+          <h3>Movement Trail</h3>
           <div id="pattern-chart"></div>
         </div>
         <div class="log-box">
-          <h3>Peak Movement Pattern</h3>
+          <h3>Movement Pattern</h3>
           <div id="movement-chart"></div>
         </div>
       </div>

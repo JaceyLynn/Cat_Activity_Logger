@@ -28,6 +28,17 @@ async function populateDateFilter() {
   }
 }
 
+document.getElementById("weekly-filter")
+  .addEventListener("change", (e) => {
+    const v = e.target.value;
+    if (!v) return;
+    isUserSwitchingDate = true;    // block daily polling
+    fetchWeeklyData(v).then(() => {
+      isUserSwitchingDate = false; // re‑enable afterwards
+    });
+});
+
+
 let loadingTimeout;
 
 function showInitialLoading() {
@@ -42,6 +53,13 @@ function showSwitchingLoading() {
 }
 function hideSwitchingLoading() {
   document.getElementById("switching-overlay").style.display = "none";
+}
+
+function showWeeklyLoading() {
+  document.getElementById("weekly-overlay").style.display = "flex";
+}
+function hideWeeklyLoading() {
+  document.getElementById("weekly-overlay").style.display = "none";
 }
 
 let isInitialLoad = true;
@@ -395,6 +413,104 @@ async function fetchChartDataOnly(selectedDate) {
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
     hideSwitchingLoading();
+  }
+}
+
+function computeSessionLog(data) {
+  // duplicate of your merging logic, but returns sessionLog array
+  let sessionLog = [];
+  let last = { Bed: null, Food: null, Window: null };
+  let start = { Bed: null, Food: null, Window: null };
+  const keys = ["Bed","Window","Food"];
+  const field = { Bed: "event2", Window: "event1", Food: "event3" };
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const t = row.local_timestamp;
+    keys.forEach(loc => {
+      const evt = row[field[loc]];
+      if (!evt) return;
+      // start
+      if (last[loc] === "nothing_detected" && evt === "cat_detected") {
+        start[loc] = t;
+      }
+      // end
+      else if (last[loc] === "cat_detected" && evt === "nothing_detected" && start[loc]) {
+        // peek ahead up to 10 non‑nulls
+        let merge = false, skip = 0;
+        for (let j = i+1; j < data.length && skip < 10; j++) {
+          const next = data[j][field[loc]];
+          if (!next) continue;
+          skip++;
+          if (next === "cat_detected") { merge = true; break; }
+          if (next === "nothing_detected") break;
+        }
+        if (!merge) {
+          const dur = Math.round((new Date(t) - new Date(start[loc]))/1000);
+          sessionLog.push({ startTime: start[loc], durationSeconds: dur, location: loc });
+          start[loc] = null;
+        }
+      }
+      last[loc] = evt;
+    });
+  }
+  return sessionLog;
+}
+
+async function fetchWeeklyData(weekKey) {
+  try {
+    showWeeklyLoading();
+
+    // 1) get all date‑tabs
+    const listRes  = await fetch(`/catdata?mode=listSheets`);
+    const dateTabs = await listRes.json(); // ["2025-04-25", …]
+
+    // 2) compute the start/end of the selected week
+    const today = new Date();
+    let start, end;
+    if (weekKey === "thisWeek") {
+      // assuming week starts Monday
+      const dayOfWeek = (today.getDay() + 6) % 7; // Mon=0..Sun=6
+      start = new Date(today);
+      start.setDate(today.getDate() - dayOfWeek);
+    } else { // lastWeek
+      const dayOfWeek = (today.getDay() + 6) % 7;
+      start = new Date(today);
+      start.setDate(today.getDate() - dayOfWeek - 7);
+    }
+    end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    // format as "YYYY-MM-DD"
+    const fmt = d => d.toISOString().slice(0,10);
+    const startS = fmt(start), endS = fmt(end);
+
+    // 3) filter tabs in that range
+    const weekTabs = dateTabs.filter(name => name >= startS && name <= endS);
+
+    // 4) fetch each day's data
+    const arrs = await Promise.all(
+      weekTabs.map(day =>
+        fetch(`/catdata?sheet=${encodeURIComponent(day)}`)
+          .then(r => r.json())
+      )
+    );
+
+    // 5) combine all rows, sort by timestamp
+    const combined = arrs.flat().sort((a,b) =>
+      new Date(a.local_timestamp) - new Date(b.local_timestamp)
+    );
+
+    // 6) compute sessions
+    const weeklyLog = computeSessionLog(combined);
+
+    // 7) redraw all five charts with weeklyLog
+    await updateCharts(weeklyLog);
+
+  } catch(err) {
+    console.error("Weekly data error:", err);
+  } finally {
+    hideWeeklyLoading();
   }
 }
 
