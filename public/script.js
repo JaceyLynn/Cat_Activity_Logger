@@ -83,6 +83,7 @@ async function fetchCatData() {
 
     //get latest line
     const latest = data[data.length - 1];
+    console.log(latest);
 
     // Duration counters
     const bedDurationSeconds = data.filter(
@@ -628,6 +629,7 @@ async function fetchWeeklyData(weekKey) {
   }
 }
 
+
 function updateStatus(
   latest,
   bedDurationSeconds,
@@ -642,35 +644,98 @@ function updateStatus(
   const windowSpot = document.getElementById("window");
   const foodBowl   = document.getElementById("food-bowl");
 
+  // 1) Find the index of the very last row where ANY sensor column is non‑null
+  const lastNonNullIdx = fullData
+    .map(r => (r.event1 || r.event2 || r.event3) != null)
+    .lastIndexOf(true);
+
+  const lastRow = fullData[lastNonNullIdx] || {};
+
+  // 2) Determine which sensor that was
+  let sensorKey = null;
+  if (lastRow.event2 != null) sensorKey = "bed";
+  else if (lastRow.event1 != null) sensorKey = "window";
+  else if (lastRow.event3 != null) sensorKey = "food";
+
+  // 3) Clear all “active” classes
   [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove("active"));
 
-  const bedDetected    = latest.event2 === "cat_detected";
-  const windowDetected = latest.event1 === "cat_detected";
-  const foodDetected   = latest.event3 === "cat_detected";
+  // 4) Only add “active” if that last block was cat_detected
+  const status = {
+    bed:    lastRow.event2,
+    window: lastRow.event1,
+    food:   lastRow.event3
+  }[sensorKey];
 
-  if (bedDetected)    catBed.classList.add("active");
-  if (windowDetected) windowSpot.classList.add("active");
-  if (foodDetected)   foodBowl.classList.add("active");
+  if (status === "cat_detected") {
+    const el = { bed: catBed, window: windowSpot, food: foodBowl }[sensorKey];
+    if (el) el.classList.add("active");
+  }
 
+  // 5) Now update the box texts as before...
   updateBoxText(
     catBed,
-    bedDetected,
+    sensorKey === "bed" && status === "cat_detected",
     bedDurationSeconds,
     findLastDetected(fullData, "event2")
   );
   updateBoxText(
     windowSpot,
-    windowDetected,
+    sensorKey === "window" && status === "cat_detected",
     windowDurationSeconds,
     findLastDetected(fullData, "event1")
   );
   updateBoxText(
     foodBowl,
-    foodDetected,
+    sensorKey === "food" && status === "cat_detected",
     foodDurationSeconds,
     findLastDetected(fullData, "event3")
   );
 }
+
+// function updateStatus(
+//   latest,
+//   bedDurationSeconds,
+//   windowDurationSeconds,
+//   foodDurationSeconds,
+//   bedFrequency,
+//   windowFrequency,
+//   foodFrequency,
+//   fullData
+// ) {
+//   const catBed     = document.getElementById("cat-bed");
+//   const windowSpot = document.getElementById("window");
+//   const foodBowl   = document.getElementById("food-bowl");
+
+//   [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove("active"));
+
+//   const bedDetected    = latest.event2 === "cat_detected";
+//   const windowDetected = latest.event1 === "cat_detected";
+//   const foodDetected   = latest.event3 === "cat_detected";
+
+//   if (bedDetected)    catBed.classList.add("active");
+//   if (windowDetected) windowSpot.classList.add("active");
+//   if (foodDetected)   foodBowl.classList.add("active");
+
+//   updateBoxText(
+//     catBed,
+//     bedDetected,
+//     bedDurationSeconds,
+//     findLastDetected(fullData, "event2")
+//   );
+//   updateBoxText(
+//     windowSpot,
+//     windowDetected,
+//     windowDurationSeconds,
+//     findLastDetected(fullData, "event1")
+//   );
+//   updateBoxText(
+//     foodBowl,
+//     foodDetected,
+//     foodDurationSeconds,
+//     findLastDetected(fullData, "event3")
+//   );
+// }
 
 //POPULATE THE CHART WITH PROCESSED DATA
 async function updateCharts(currentSessionLog) {
