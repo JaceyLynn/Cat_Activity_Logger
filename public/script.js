@@ -34,16 +34,6 @@ async function populateDateFilter() {
   }
 }
 
-
-document.getElementById("date-filter").addEventListener("change", (e) => {
-  const selectedDate = e.target.value;
-  if (selectedDate) {
-    isUserSwitchingDate = true;
-    showSwitchingLoading(); // Show switch loading
-    fetchChartDataOnly(selectedDate);
-  }
-});
-
 //weekly drop down switch mark
 const weeklySelect = document.getElementById("weekly-filter");
 console.log("weeklySelect is:", weeklySelect);
@@ -1440,3 +1430,12 @@ async function drawMovementChart(sessionLog) {
 // setInterval(fetchCatData, 3000);
 populateDateFilter();
 fetchCatData();
+
+document.getElementById("date-filter").addEventListener("change", (e) => {
+  const selectedDate = e.target.value;
+  if (selectedDate) {
+    isUserSwitchingDate = true;
+    showSwitchingLoading(); // Show switch loading
+    fetchChartDataOnly(selectedDate);
+  }
+});
