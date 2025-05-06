@@ -69,7 +69,7 @@ async function fetchCatData() {
 
     const res = await fetch("/catdata");
     const data = await res.json();
-
+checkSensorHealth(data);
     if (!data || !Array.isArray(data)) return;
 
     const latest = data[data.length - 1];
@@ -249,6 +249,67 @@ async function fetchCatData() {
     if (isInitialLoad) hideInitialLoading();
   }
  setTimeout(fetchCatData, 3000);
+}
+
+// 1) Inspect the last 30 rows of each event column
+ function checkSensorHealth(data) {
+  const sensors = {
+    event1: "Window sensor",
+    event2: "Bed sensor",
+    event3: "Food sensor",
+  };
+
+  Object.entries(sensors).forEach(([evtKey, name]) => {
+    const last20 = data.slice(-20);
+    console.log(`⏱ Checking ${name}, last20 values:`,
+      last20.map(r => r[evtKey]));  // debug
+
+    // if all 20 are falsy (undefined, null, or empty string), alert
+    if (last20.length > 0 && last20.every(r => !r[evtKey])) {
+      showSensorAlert(name);
+    }
+  });
+}
+
+
+// 2) Create a modal‐style popup in #60D1DB (teal) and auto‑dismiss
+function showSensorAlert(sensorName) {
+  // don’t duplicate if already showing
+  if (document.getElementById("sensor-alert")) return;
+
+  // full‐screen translucent backdrop
+  const overlay = document.createElement("div");
+  overlay.id = "sensor-alert";
+  Object.assign(overlay.style, {
+    position: "fixed",
+    top: 0, left: 0, width: "100%", height: "100%",
+    background: "rgba(0,0,0,0.4)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10000,
+  });
+
+  // message box
+  const box = document.createElement("div");
+  box.textContent = `${sensorName} is not functioning`;
+  Object.assign(box.style, {
+    background: "#ee5a36",
+    color: "#fff",
+    padding: "1rem 1.5rem",
+    borderRadius: "8px",
+    fontSize: "1.2rem",
+    textAlign: "center",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+  });
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  // auto‑dismiss after 5 seconds
+  setTimeout(() => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  }, 5000);
 }
 
 async function fetchChartDataOnly(selectedDate) {
@@ -461,62 +522,74 @@ function computeSessionLog(data) {
   return sessionLog;
 }
 
-
 async function fetchWeeklyData(weekKey) {
-  console.log("🔄 fetchWeeklyData()", { weekKey, isUserSwitchingDate, isUserSwitchingWeekly });
+  console.log("🔄 fetchWeeklyData()", weekKey);
+  isUserSwitchingWeekly = true;
+  showWeeklyLoading();
+
   try {
-    // block both real‑time and daily while we load weekly
-    isUserSwitchingWeekly = true;
-    showWeeklyLoading();
+    // 1) Get all tabs
+    const listRes  = await fetch("/catdata?mode=listSheets");
+    const allTabs  = await listRes.json();
+    console.log("➡️ dateTabs:", allTabs.slice(0,10), "...");
 
-    // 1) get all date‑tabs
-    const listRes  = await fetch(`/catdata?mode=listSheets`);
-    const dateTabs = await listRes.json(); // ["2025-04-25", …]
+    // 2) Keep only those named YYYY-MM-DD
+    const dateTabs = allTabs.filter(name => /^\d{4}-\d{2}-\d{2}$/.test(name));
+    console.log("✅ filtered dateTabs:", dateTabs.slice(0,10), "...");
 
-    // 2) compute the start/end of the selected week
+    // 3) Build our 7-day window
     const today = new Date();
     let start, end;
+
     if (weekKey === "thisWeek") {
-      // assuming week starts Monday
-      const dayOfWeek = (today.getDay() + 6) % 7; // Mon=0..Sun=6
+      // last 7 days, including today
+      end   = new Date(today);
       start = new Date(today);
-      start.setDate(today.getDate() - dayOfWeek);
-    } else { // lastWeek
-      const dayOfWeek = (today.getDay() + 6) % 7;
-      start = new Date(today);
-      start.setDate(today.getDate() - dayOfWeek - 7);
+      start.setDate(today.getDate() - 6);
+    } else {
+      // the 7 days before today
+      end   = new Date(today);
+      end.setDate(today.getDate() - 7);
+      start = new Date(end);
+      start.setDate(end.getDate() - 6);
     }
-    end = new Date(start);
-    end.setDate(start.getDate() + 6);
 
-    // format as "YYYY-MM-DD"
-    const fmt = d => d.toISOString().slice(0,10);
+    const fmt   = d => d.toISOString().slice(0,10);
     const startS = fmt(start), endS = fmt(end);
+    console.log(`📅 week range: ${startS} → ${endS}`);
 
-    // 3) filter tabs in that range
-    const weekTabs = dateTabs.filter(name => name >= startS && name <= endS);
+    // 4) Pick tabs in that range
+    const weekTabs = dateTabs.filter(d => d >= startS && d <= endS);
+    console.log("🔎 weekTabs:", weekTabs);
 
-    // 4) fetch each day's data
-    const arrs = await Promise.all(
+    // 5) Fetch each day’s sheet in parallel
+    const allDataPerDay = await Promise.all(
       weekTabs.map(day =>
         fetch(`/catdata?sheet=${encodeURIComponent(day)}`)
-          .then(r => r.json())
+          .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} for ${day}`);
+            return r.json();
+          })
       )
     );
+    console.log("📊 fetched lengths:", allDataPerDay.map(arr => arr.length));
 
-    // 5) combine all rows, sort by timestamp
-    const combined = arrs.flat().sort((a,b) =>
+    // 6) Flatten & sort by timestamp
+    const allData = allDataPerDay.flat();
+    allData.sort((a,b) =>
       new Date(a.local_timestamp) - new Date(b.local_timestamp)
     );
+    console.log("📈 allData combined:", allData.length);
 
-    // 6) compute sessions
-    const weeklyLog = computeSessionLog(combined);
+    // 7) Turn rows into sessions (re‑use your existing helper)
+    const weeklyLog = computeSessionLog(allData);
+    console.log("🗂️ weeklyLog sessions:", weeklyLog.length);
 
-    // 7) redraw all five charts with weeklyLog
+    // 8) Finally redraw
     await updateCharts(weeklyLog);
 
   } catch (err) {
-    console.error("Error fetching weekly data:", err);
+    console.error("❌ Error fetching weekly data:", err);
   } finally {
     hideWeeklyLoading();
     isUserSwitchingWeekly = false;
@@ -1267,8 +1340,8 @@ svg.append("g")
 }
 
 // setInterval(fetchCatData, 3000);
-fetchCatData();
 populateDateFilter();
+fetchCatData();
 
 document.getElementById("date-filter").addEventListener("change", (e) => {
   const selectedDate = e.target.value;
