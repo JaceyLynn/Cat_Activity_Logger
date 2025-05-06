@@ -13,7 +13,7 @@ app.use(express.static("public")); // Serve static files from the 'public' folde
 // Proxy endpoint
 app.get('/catdata', async (req, res) => {
   const { sheet, mode } = req.query;
-  console.log('🔍 /catdata called with:', { sheet, mode });
+  console.log('/catdata called with:', { sheet, mode });
 
   let url = GOOGLE_SCRIPT_URL + '?';
   if (mode === 'listSheets') {

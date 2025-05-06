@@ -34,6 +34,16 @@ async function populateDateFilter() {
   }
 }
 
+
+document.getElementById("date-filter").addEventListener("change", (e) => {
+  const selectedDate = e.target.value;
+  if (selectedDate) {
+    isUserSwitchingDate = true;
+    showSwitchingLoading(); // Show switch loading
+    fetchChartDataOnly(selectedDate);
+  }
+});
+
 //weekly drop down switch mark
 const weeklySelect = document.getElementById("weekly-filter");
 console.log("weeklySelect is:", weeklySelect);
@@ -578,9 +588,9 @@ async function fetchWeeklyData(weekKey) {
     } else {
       // weekbefore
       end = new Date(today);
-      end.setDate(today.getDate() - 13);
+      end.setDate(today.getDate() - 6);
       start = new Date(end);
-      start.setDate(end.getDate() - 7);
+      start.setDate(end.getDate() - 12);
     }
 
     const fmt = (d) => d.toISOString().slice(0, 10);
@@ -882,7 +892,7 @@ function drawSessionChart(sessionLog) {
       .attr("text-anchor", "middle")
       .attr("transform", `rotate(-90)`)
       .attr("x", -height / 2)
-      .attr("y", 15) // distance from the axis; adjust as needed
+      .attr("y", 15) // distance from the axis
       .text("Duration (min)")
       .style("fill", "#333")
       .style("font-size", "14px");
@@ -978,7 +988,7 @@ function drawHourlyChart(hourlyData) {
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
 
-    // ─── Legend ────────────────────────────────────────────────────────────────
+    // Legend 
     const legend = svg
       .append("g")
       .attr(
@@ -1018,7 +1028,7 @@ function drawPatternChart(sessionLog) {
     const height = 200;
     const margin = { top: 20, right: 30, bottom: 60, left: 80 };
 
-    // 1) parse timestamps & map to either full Date or time‑of‑day
+    // parse timestamps & map to either full Date or time‑of‑day
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
     const data = sessionLog
       .map((d) => {
@@ -1037,14 +1047,14 @@ function drawPatternChart(sessionLog) {
         };
       })
       .sort((a, b) => {
-        // sort by whichever field we’re going to plot
+        // sort by field
         return (
           (isUserSwitchingWeekly ? a.timeOfDay : a.original) -
           (isUserSwitchingWeekly ? b.timeOfDay : b.original)
         );
       });
 
-    // 2) X scale: either full‑date extent or fixed 24h
+    // X scale
     const x = isUserSwitchingWeekly
       ? d3
           .scaleTime()
@@ -1058,7 +1068,7 @@ function drawPatternChart(sessionLog) {
           .domain(d3.extent(data, (d) => d.original))
           .range([margin.left, width - margin.right]);
 
-    // 3) Y / color / shape as before
+    //  Y / color / shape as before
     const locations = ["Bed", "Window", "Food"];
     const y = d3
       .scalePoint()
@@ -1071,7 +1081,7 @@ function drawPatternChart(sessionLog) {
       .domain(locations)
       .range(["#D390CE", "#60D1DB", "#F5AB54"]);
 
-    // 4) build SVG
+    // build SVG
     const svg = d3
       .select("#pattern-chart")
       .append("svg")
@@ -1079,14 +1089,14 @@ function drawPatternChart(sessionLog) {
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("height", height);
 
-    // 5) line generator picks the correct field
+    // line generator picks the correct field
     const line = d3
       .line()
       .x((d) => x(isUserSwitchingWeekly ? d.timeOfDay : d.original))
       .y((d) => y(d.location))
       .curve(d3.curveMonotoneX);
 
-    // 6) draw & animate path
+    // draw & animate path
     const path = svg
       .append("path")
       .datum(data)
@@ -1104,7 +1114,7 @@ function drawPatternChart(sessionLog) {
       .ease(d3.easeLinear)
       .attr("stroke-dashoffset", 0);
 
-    // 7) draw circles
+    // draw circles
     svg
       .append("g")
       .selectAll("circle")
@@ -1115,7 +1125,7 @@ function drawPatternChart(sessionLog) {
       .attr("r", 3)
       .attr("fill", (d) => color(d.location));
 
-    // 8) X axis
+    // X axis
     svg
       .append("g")
       .attr("transform", `translate(0,${height - margin.bottom})`)
@@ -1127,13 +1137,13 @@ function drawPatternChart(sessionLog) {
           .tickSizeOuter(0)
       );
 
-    // 9) Y axis
+    // Y axis
     svg
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
 
-    // 10) legend (unchanged)
+    // legend (unchanged)
     const legend = svg
       .append("g")
       .attr(
@@ -1162,7 +1172,7 @@ function drawPatternChart(sessionLog) {
 }
 
 async function drawPeakChart(sessionLog) {
-  // 1) Aggregate total duration per hour for each location
+  // Aggregate total duration per hour for each location
   const locations = ["Bed", "Window", "Food"];
   const parse = d3.timeParse("%Y-%m-%d %H:%M:%S");
   const hourlyByLoc = {};
@@ -1176,7 +1186,7 @@ async function drawPeakChart(sessionLog) {
     }
   });
 
-  // 2) Flatten into a data array
+  // Flatten into a data array
   const heatmapData = [];
   locations.forEach((loc) => {
     hourlyByLoc[loc].forEach((val, h) => {
@@ -1184,7 +1194,7 @@ async function drawPeakChart(sessionLog) {
     });
   });
 
-  // 3) Clear & set SVG dimensions
+  // Clear & set SVG dimensions
   d3.select("#peak-chart").html("");
   const container = document.getElementById("peak-chart");
   const width = container.clientWidth || 800;
@@ -1192,7 +1202,7 @@ async function drawPeakChart(sessionLog) {
   const margin = { top: 40, right: 20, bottom: 60, left: 80 };
   const cellSize = (width - margin.left - margin.right) / 24;
 
-  // 4) Scales
+  // Scales
   const x = d3
     .scaleBand()
     .domain(d3.range(24))
@@ -1208,7 +1218,7 @@ async function drawPeakChart(sessionLog) {
     .domain([0, maxVal])
     .range(["#DED9D3", "#ee5a36"]);
 
-  // 5) Create SVG
+  // Create SVG
   const svg = d3
     .select("#peak-chart")
     .append("svg")
@@ -1250,7 +1260,7 @@ async function drawPeakChart(sessionLog) {
   //     .style("font-size","14px")
   //     .text("Hour of Day");
 
-  // 8) Y‑axis (locations)
+  // Y‑axis (locations)
   svg
     .append("g")
     .attr("transform", `translate(${margin.left - 5},0)`)
@@ -1266,7 +1276,7 @@ async function drawPeakChart(sessionLog) {
   //     .style("font-size","14px")
   //     .text("Location");
 
-  // 9) Legend (gradient + axis)
+  // Legend
   const legendWidth = 400;
   const legendHeight = 10;
   const legendScale = d3
@@ -1338,7 +1348,7 @@ async function drawMovementChart(sessionLog) {
     .append("g")
     .attr("transform", `translate(${width / 2},${height / 2})`);
   const tooltip = d3.select("#tooltip");
-  // 1) build a 3×3 transition count matrix
+  // build a 3×3 transition count matrix
   const locs = ["Bed", "Food", "Window"];
   const idx = { Bed: 0, Food: 1, Window: 2 };
   const matrix = Array.from({ length: 3 }, () => [0, 0, 0]);
@@ -1355,24 +1365,24 @@ async function drawMovementChart(sessionLog) {
     if (from !== to) matrix[idx[from]][idx[to]]++;
   }
 
-  // 2) chord layout
+  // chord layout
   const chord = d3.chordDirected().padAngle(0.05).sortSubgroups(d3.descending)(
     matrix
   );
 
-  // 3) arc + ribbon generators
+  // arc + ribbon generators
   const arc = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
   const ribbon = d3
     .ribbonArrow() // ← use ribbonArrow, not ribbonDirected
     .radius(innerRadius);
 
-  // 4) color scale
+  // color
   const color = d3
     .scaleOrdinal()
     .domain([0, 1, 2])
     .range(["#D390CE", "#F5AB54", "#60D1DB"]);
 
-  // 5) draw outer arcs
+  // draw outer arcs
   const group = svg.append("g").selectAll("g").data(chord.groups).join("g");
 
   group
@@ -1381,7 +1391,7 @@ async function drawMovementChart(sessionLog) {
     .attr("fill", (d) => color(d.index))
     .attr("stroke", (d) => d3.rgb(color(d.index)).darker());
 
-  // 6) group labels
+  // group labels
   group
     .append("text")
     .each((d) => (d.angle = (d.startAngle + d.endAngle) / 2))
@@ -1397,7 +1407,7 @@ async function drawMovementChart(sessionLog) {
     .attr("text-anchor", (d) => (d.angle > Math.PI ? "end" : "start"))
     .text((d) => locs[d.index]);
 
-  // 7) draw the directed ribbons
+  // draw the directed ribbons
   svg
     .append("g")
     .selectAll("path")
@@ -1430,12 +1440,3 @@ async function drawMovementChart(sessionLog) {
 // setInterval(fetchCatData, 3000);
 populateDateFilter();
 fetchCatData();
-
-document.getElementById("date-filter").addEventListener("change", (e) => {
-  const selectedDate = e.target.value;
-  if (selectedDate) {
-    isUserSwitchingDate = true;
-    showSwitchingLoading(); // ✅ Show switch loading
-    fetchChartDataOnly(selectedDate);
-  }
-});
