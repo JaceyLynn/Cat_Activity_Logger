@@ -30,17 +30,12 @@ async function populateDateFilter() {
 }
 
 const weeklySelect = document.getElementById("weekly-filter");
-console.log("weeklySelect element is:", weeklySelect);
-
-weeklySelect.addEventListener("change", (e) => {
-  console.log("▶️ weekly-filter changed to:", e.target.value);
-  const v = e.target.value;
-  if (!v) {
-    isUserSwitchingWeekly = false;
-    return;
-  }
-  fetchWeeklyData(v);
+console.log("🎛️ weeklySelect is:", weeklySelect);
+weeklySelect.addEventListener("change", e => {
+  console.log("📅 weekly‑filter changed to:", e.target.value);
+  fetchWeeklyData(e.target.value);
 });
+
 
 let loadingTimeout;
 
@@ -68,15 +63,14 @@ function hideWeeklyLoading() {
 let isInitialLoad = true;
 
 async function fetchCatData() {
-  
   try {
-    if (isUserSwitchingDate || isUserSwitchingWeekly) return;
-    console.log("⏱ fetchCatData: switching?[date,weekly] =", isUserSwitchingDate, isUserSwitchingWeekly);
+    if (isUserSwitchingDate) return;
 
     if (isInitialLoad) showInitialLoading();
 
     const res = await fetch("/catdata");
     const data = await res.json();
+    checkSensorHealth(data);
 
     if (!data || !Array.isArray(data)) return;
 
@@ -256,6 +250,7 @@ async function fetchCatData() {
     console.error("Error fetching cat data:", err);
     if (isInitialLoad) hideInitialLoading();
   }
+ setTimeout(fetchCatData, 3000);
 }
 
 async function fetchChartDataOnly(selectedDate) {
@@ -470,7 +465,7 @@ function computeSessionLog(data) {
 
 
 async function fetchWeeklyData(weekKey) {
-  console.log("🔄 fetchWeeklyData called with:", weekKey);
+  console.log("🔄 fetchWeeklyData()", { weekKey, isUserSwitchingDate, isUserSwitchingWeekly });
   try {
     // block both real‑time and daily while we load weekly
     isUserSwitchingWeekly = true;
@@ -1273,7 +1268,7 @@ svg.append("g")
     });
 }
 
-setInterval(fetchCatData, 3000);
+// setInterval(fetchCatData, 3000);
 fetchCatData();
 populateDateFilter();
 
