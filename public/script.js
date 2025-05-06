@@ -238,7 +238,7 @@ async function fetchCatData() {
         lastFoodStatus = row.event3;
       }
     }
-//sending processed data out
+//sending processed data out for now section
     updateUI(
       latest,
       bedDurationSeconds,
@@ -250,7 +250,7 @@ async function fetchCatData() {
       sessionLog,
       data
     );
-
+//turn off loading screen when data loaded
     if (isInitialLoad) {
       hideInitialLoading();
       isInitialLoad = false;
@@ -259,10 +259,10 @@ async function fetchCatData() {
     console.error("Error fetching cat data:", err);
     if (isInitialLoad) hideInitialLoading();
   }
-  setTimeout(fetchCatData, 3000);
+  setTimeout(fetchCatData, 3000);//real time refreshes
 }
 
-// 1) Inspect the last 30 rows of each event column
+// Inspect the last 20 rows of each event column for malfunction
 function checkSensorHealth(data) {
   const sensors = {
     event1: "Window sensor",
@@ -273,7 +273,7 @@ function checkSensorHealth(data) {
   Object.entries(sensors).forEach(([evtKey, name]) => {
     const last20 = data.slice(-20);
     console.log(
-      `⏱ Checking ${name}, last20 values:`,
+      `Checking ${name}, last20 values:`,
       last20.map((r) => r[evtKey])
     ); // debug
 
@@ -284,12 +284,12 @@ function checkSensorHealth(data) {
   });
 }
 
-// 2) Create a modal‐style popup in #60D1DB (teal) and auto‑dismiss
+// Create a popup and auto‑dismiss!!!
 function showSensorAlert(sensorName) {
-  // don’t duplicate if already showing
+  // don’t duplicate if already showing!!!
   if (document.getElementById("sensor-alert")) return;
 
-  // full‐screen translucent backdrop
+  // aesthetic
   const overlay = document.createElement("div");
   overlay.id = "sensor-alert";
   Object.assign(overlay.style, {
@@ -327,19 +327,20 @@ function showSensorAlert(sensorName) {
   }, 5000);
 }
 
+//separate function for updating chart only
 async function fetchChartDataOnly(selectedDate) {
   try {
-    // don’t load daily if weekly is in progress
+    // don’t load daily if weekly is in progress!!!
     if (isUserSwitchingWeekly) return;
 
-    isUserSwitchingDate = true;
-    showSwitchingLoading();
+    isUserSwitchingDate = true;//trigger dataset switch
+    showSwitchingLoading();//trigger loading screen
 
     const response = await fetch(
       `/catdata?sheet=${encodeURIComponent(selectedDate)}`
     );
     const data = await response.json();
-
+//basically same logic as fetch cat data
     if (!data || !Array.isArray(data) || data.length === 0) {
       console.warn("No data found for the selected day.");
       hideSwitchingLoading();
@@ -362,7 +363,7 @@ async function fetchChartDataOnly(selectedDate) {
       const row = data[i];
       const currentTime = row.local_timestamp;
 
-      // === BED SESSION (event2) ===
+      // BED SESSION (event2)
       if (row.event2) {
         if (
           lastBedStatus === "nothing_detected" &&
@@ -374,10 +375,9 @@ async function fetchChartDataOnly(selectedDate) {
           row.event2 === "nothing_detected" &&
           bedSessionStart
         ) {
-          // Peek forward
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 300; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 120; j++) {
             const next = data[j];
             if (!next.event2) continue; // skip nulls
             skipCount++;
@@ -403,7 +403,7 @@ async function fetchChartDataOnly(selectedDate) {
         lastBedStatus = row.event2;
       }
 
-      // === WINDOW SESSION (event1) ===
+      // WINDOW SESSION (event1)
       if (row.event1) {
         if (
           lastWindowStatus === "nothing_detected" &&
@@ -417,7 +417,7 @@ async function fetchChartDataOnly(selectedDate) {
         ) {
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 300; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 200; j++) {
             const next = data[j];
             if (!next.event1) continue;
             skipCount++;
@@ -443,7 +443,7 @@ async function fetchChartDataOnly(selectedDate) {
         lastWindowStatus = row.event1;
       }
 
-      // === FOOD SESSION (event3) ===
+      // FOOD SESSION (event3)
       if (row.event3) {
         if (
           lastFoodStatus === "nothing_detected" &&
@@ -457,7 +457,7 @@ async function fetchChartDataOnly(selectedDate) {
         ) {
           let merge = false;
           let skipCount = 0;
-          for (let j = i + 1; j < data.length && skipCount < 30; j++) {
+          for (let j = i + 1; j < data.length && skipCount < 60; j++) {
             const next = data[j];
             if (!next.event3) continue;
             skipCount++;
@@ -487,7 +487,7 @@ async function fetchChartDataOnly(selectedDate) {
     console.log("Processed sessionLog for:", selectedDate, currentSessionLog);
 
     await updateCharts(currentSessionLog);
-    hideSwitchingLoading(); // ✅ Hide when charts are ready
+    hideSwitchingLoading(); // Hide loading when charts are ready
   } catch (err) {
     console.error("Error fetching data for selected day:", err);
   } finally {
@@ -496,8 +496,9 @@ async function fetchChartDataOnly(selectedDate) {
   }
 }
 
+
+//for weekly processing
 function computeSessionLog(data) {
-  // duplicate of your merging logic, but returns sessionLog array
   let sessionLog = [];
   let last = { Bed: null, Food: null, Window: null };
   let start = { Bed: null, Food: null, Window: null };
@@ -549,22 +550,23 @@ function computeSessionLog(data) {
   return sessionLog;
 }
 
+
+//getting weekly data!
 async function fetchWeeklyData(weekKey) {
-  console.log("🔄 fetchWeeklyData()", weekKey);
+  console.log("fetchWeeklyData()", weekKey);
   isUserSwitchingWeekly = true;
   showWeeklyLoading();
 
   try {
-    // 1) Get all tabs
+    // Get all tabs
     const listRes = await fetch("/catdata?mode=listSheets");
     const allTabs = await listRes.json();
-    console.log("➡️ dateTabs:", allTabs.slice(0, 10), "...");
+    console.log("dateTabs:", allTabs.slice(0, 10), "...");
 
-    // 2) Keep only those named YYYY-MM-DD
     const dateTabs = allTabs.filter((name) => /^\d{4}-\d{2}-\d{2}$/.test(name));
-    console.log("✅ filtered dateTabs:", dateTabs.slice(0, 10), "...");
+    console.log("filtered dateTabs:", dateTabs.slice(0, 10), "...");
 
-    // 3) Build our 7-day window
+    // Build 7-day window
     const today = new Date();
     let start, end;
 
@@ -574,23 +576,23 @@ async function fetchWeeklyData(weekKey) {
       start = new Date(today);
       start.setDate(today.getDate() - 6);
     } else {
-      // the 7 days before today
+      // weekbefore
       end = new Date(today);
-      end.setDate(today.getDate() - 7);
+      end.setDate(today.getDate() - 13);
       start = new Date(end);
-      start.setDate(end.getDate() - 6);
+      start.setDate(end.getDate() - 7);
     }
 
     const fmt = (d) => d.toISOString().slice(0, 10);
     const startS = fmt(start),
       endS = fmt(end);
-    console.log(`📅 week range: ${startS} → ${endS}`);
+    console.log(`week range: ${startS} → ${endS}`);
 
-    // 4) Pick tabs in that range
+    //Pick tabs in that range
     const weekTabs = dateTabs.filter((d) => d >= startS && d <= endS);
-    console.log("🔎 weekTabs:", weekTabs);
+    console.log("weekTabs:", weekTabs);
 
-    // 5) Fetch each day’s sheet in parallel
+    //Fetch each day’s sheet
     const allDataPerDay = await Promise.all(
       weekTabs.map((day) =>
         fetch(`/catdata?sheet=${encodeURIComponent(day)}`).then((r) => {
@@ -600,33 +602,35 @@ async function fetchWeeklyData(weekKey) {
       )
     );
     console.log(
-      "📊 fetched lengths:",
+      "fetched lengths:",
       allDataPerDay.map((arr) => arr.length)
     );
 
-    // 6) Flatten & sort by timestamp
+    // Flatten & sort by timestamp!!!
     const allData = allDataPerDay.flat();
     allData.sort(
       (a, b) => new Date(a.local_timestamp) - new Date(b.local_timestamp)
     );
-    console.log("📈 allData combined:", allData.length);
+    console.log("allData combined:", allData.length);
 
-    // 7) Turn rows into sessions (re‑use your existing helper)
+    // Turn rows into sessions (re‑use your existing helper)
     const weeklyLog = computeSessionLog(allData);
-    console.log("🗂️ weeklyLog sessions:", weeklyLog.length);
+    console.log("weeklyLog sessions:", weeklyLog.length);
 
-    // 8) Finally redraw
+    // Finally redraw
     await updateCharts(weeklyLog);
   } catch (err) {
-    console.error("❌ Error fetching weekly data:", err);
+    console.error("Error fetching weekly data:", err);
   } finally {
     hideWeeklyLoading();
     isUserSwitchingWeekly = false;
   }
 }
 
+
+//POPULATE THE CHART WITH PROCESSED DATA
 async function updateCharts(currentSessionLog) {
-  // Wait for each chart to finish drawing before continuing
+  // Wait for each chart to finish drawing before continuing!!! loading
   await drawSessionChart(currentSessionLog);
   const hourlyData = prepareHourlySummary(currentSessionLog);
   await drawHourlyChart(hourlyData);
@@ -635,6 +639,8 @@ async function updateCharts(currentSessionLog) {
   await drawMovementChart(currentSessionLog);
 }
 
+
+//special data processing for hourly chart
 function prepareHourlySummary(sessionLog) {
   // Initialize hourly summary
   const hours = Array.from({ length: 24 }, (_, i) => ({
@@ -679,7 +685,7 @@ function formatReadableTime(timestampStr) {
   const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${hours}:${minutes}:${seconds}`;
 }
-
+//distributing datas to ui
 function updateUI(
   latest,
   bedDurationSeconds,
@@ -732,7 +738,7 @@ function updateUI(
   drawPeakChart(sessionLog);
   drawMovementChart(sessionLog);
 }
-
+//now section filling data
 function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
   const p = box.querySelector("p");
   const pawLine = isActive ? "🐾<br>" : "";
@@ -747,6 +753,8 @@ function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
   `;
 }
 
+
+//drawing all the charts
 function drawSessionChart(sessionLog) {
   return new Promise((resolve) => {
     d3.select("#session-chart").html(""); // Clear previous chart
@@ -758,7 +766,7 @@ function drawSessionChart(sessionLog) {
 
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-    // For weekly mode, remap startTimes to time‐of‐day
+    // For weekly mode, remap startTimes to time‐of‐day!!!!
     let points = sessionLog
       .map((d) => {
         const dt = parseTime(d.startTime);
@@ -853,7 +861,7 @@ function drawSessionChart(sessionLog) {
       .call(
         d3
           .axisBottom(x)
-          .ticks(d3.timeHour.every(1)) // every 2 hours (adjust as needed)
+          .ticks(d3.timeHour.every(1)) // every ? hours
           .tickFormat(d3.timeFormat("%H:%M")) // 24-hour format
           .tickSizeOuter(0)
       );
