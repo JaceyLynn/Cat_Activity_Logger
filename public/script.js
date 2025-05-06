@@ -801,60 +801,52 @@ function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
 //drawing all the charts
 function drawSessionChart(sessionLog) {
   return new Promise((resolve) => {
-    d3.select("#session-chart").html(""); // clear
+    // 1) clear out any existing chart
+    d3.select("#session-chart").html("");
 
+    // 2) dimensions & parser
     const container = document.getElementById("session-chart");
     const width  = container.clientWidth  || 1000;
     const height = 700;
     const margin = { top: 20, right: 30, bottom: 60, left: 60 };
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-    // Build a unified points array
+    // 3) build a unified points array (strip out the date, keep only time‑of‑day)
     const points = sessionLog
       .map(d => {
-        // parse the timestamp (string → Date)
+        // parse into a Date
         let dt = (typeof d.startTime === "string")
           ? parseTime(d.startTime)
           : new Date(d.startTime);
-        if (!dt) return null;
-
-        if (isUserSwitchingWeekly) {
-          // map to time‐of‐day for weekly mode
-          dt = new Date(
+        if (!dt || isNaN(dt)) return null;
+        // collapse to 1970‑01‑01 at the same time
+        return {
+          startTime: new Date(
             1970, 0, 1,
             dt.getHours(),
             dt.getMinutes(),
             dt.getSeconds()
-          );
-        }
-
-        return {
-          startTime:       dt,
+          ),
           durationSeconds: d.durationSeconds,
           location:        d.location
         };
       })
-      .filter(d => d && d.startTime instanceof Date && d.durationSeconds > 0);
+      .filter(d => d && d.durationSeconds > 0);
 
-    // X-scale
-    const x = isUserSwitchingWeekly
-      ? d3.scaleTime()
-          .domain([
-            new Date(1970,0,1,0,0,0),
-            new Date(1970,0,1,23,59,59)
-          ])
-          .range([margin.left, width - margin.right])
-      : d3.scaleTime()
-          .domain(d3.extent(points, d => d.startTime))
-          .range([margin.left, width - margin.right]);
+    // 4) X scale: always full 0:00 → 23:59 hours
+    const x = d3.scaleTime()
+      .domain([
+        new Date(1970,0,1,0,0,0),
+        new Date(1970,0,1,23,59,59)
+      ])
+      .range([margin.left, width - margin.right]);
 
-    // Y-scale (power for compression)
-    const y = d3.scalePow()
-      .exponent(0.3)
+    // 5) Y scale: duration, with slight compression
+    const y = d3.scalePow().exponent(0.3)
       .domain([0, d3.max(points, d => d.durationSeconds)])
       .range([height - margin.bottom, margin.top]);
 
-    // Symbol & color scales
+    // 6) symbol + color lookups
     const shape = d3.scaleOrdinal()
       .domain(["Bed","Food","Window"])
       .range([d3.symbolCircle, d3.symbolTriangle, d3.symbolSquare]);
@@ -863,14 +855,14 @@ function drawSessionChart(sessionLog) {
       .domain(["Bed","Food","Window"])
       .range(["#D390CE","#F5AB54","#60D1DB"]);
 
-    // Create SVG
+    // 7) create SVG
     const svg = d3.select("#session-chart")
       .append("svg")
       .attr("width","100%")
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("height", height);
+      .attr("viewBox",`0 0 ${width} ${height}`)
+      .attr("height",height);
 
-    // Draw symbols
+    // 8) draw the dots
     svg.append("g")
       .selectAll("path")
       .data(points)
@@ -879,34 +871,26 @@ function drawSessionChart(sessionLog) {
         .attr("d", d3.symbol().type(d => shape(d.location)).size(100))
         .attr("fill", d => color(d.location));
 
-    // X axis
-const x = d3.scaleTime()
-  .domain([
-    new Date(1970, 0, 1,  0,  0,  0),
-    new Date(1970, 0, 1, 23, 59, 59)
-  ])
-  .range([margin.left, width - margin.right]);
+    // 9) X axis: hourly ticks 00:00–23:00
+    svg.append("g")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(
+        d3.axisBottom(x)
+          .ticks(d3.timeHour.every(1))
+          .tickFormat(d3.timeFormat("%H:%M"))
+          .tickSizeOuter(0)
+      );
 
-// then later…
-svg.append("g")
-  .attr("transform", `translate(0,${height - margin.bottom})`)
-  .call(
-    d3.axisBottom(x)
-      .ticks(d3.timeHour.every(1))
-      .tickFormat(d3.timeFormat("%H:%M"))
-      .tickSizeOuter(0)
-  );
-
-    // Y axis (minutes)
+    // 10) Y axis: duration in minutes
     svg.append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(
         d3.axisLeft(y)
           .ticks(10)
-          .tickFormat(d => (d/60).toFixed(1) + " m")
+          .tickFormat(d => `${(d/60).toFixed(1)} m`)
       );
 
-    // Y axis label
+    // 11) Y‐axis label
     svg.append("text")
       .attr("text-anchor","middle")
       .attr("transform","rotate(-90)")
@@ -916,19 +900,15 @@ svg.append("g")
       .style("fill","#333")
       .style("font-size","14px");
 
-    // Legend
-    const legendData = ["Bed","Food","Window"];
+    // 12) Legend
     const legend = svg.append("g")
-      .attr("transform",
-        `translate(${margin.left},${height - margin.bottom + 40})`
-      );
+      .attr("transform", `translate(${margin.left},${height - margin.bottom + 40})`);
 
-    legendData.forEach((loc,i) => {
+    ["Bed","Food","Window"].forEach((loc,i) => {
       legend.append("path")
         .attr("d", d3.symbol().type(shape(loc)).size(100)())
         .attr("transform", `translate(${i*140},0)`)
         .attr("fill", color(loc));
-
       legend.append("text")
         .attr("x", i*140 + 12)
         .attr("y", 4)
@@ -940,6 +920,7 @@ svg.append("g")
     resolve();
   });
 }
+
 
 function drawHourlyChart(hourlyData) {
   return new Promise((resolve) => {
