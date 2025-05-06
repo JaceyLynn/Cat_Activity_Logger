@@ -42,7 +42,6 @@ weeklySelect.addEventListener("change", (e) => {
   fetchWeeklyData(e.target.value);
 });
 
-
 //Flags for all the different loading screen
 let loadingTimeout;
 //first load
@@ -67,7 +66,6 @@ function hideWeeklyLoading() {
   document.getElementById("weekly-overlay").style.display = "none";
 }
 
-
 //fetch data for the now section
 async function fetchCatData() {
   try {
@@ -78,8 +76,8 @@ async function fetchCatData() {
     const data = await res.json();
     //get notification if one event is not logging at all
     checkSensorHealth(data);
-    
-    if (!data || !Array.isArray(data)) return;//sanity check
+
+    if (!data || !Array.isArray(data)) return; //sanity check
 
     //get latest line
     const latest = data[data.length - 1];
@@ -115,16 +113,19 @@ async function fetchCatData() {
       //session calculations
       // -------------BED (event2) ----------------
       if (row.event2) {
-        if (//detect session start
+        if (
+          //detect session start
           lastBedStatus === "nothing_detected" &&
           row.event2 === "cat_detected"
         ) {
           bedSessionStart = currentTime;
-        } else if (//detect session end
+        } else if (
+          //detect session end
           lastBedStatus === "cat_detected" &&
           row.event2 === "nothing_detected" &&
           bedSessionStart
-        ) {//prevent sensor glitching, if two session very close, merge them
+        ) {
+          //prevent sensor glitching, if two session very close, merge them
           let merge = false;
           let skipCount = 0;
           for (let j = i + 1; j < data.length && skipCount < 120; j++) {
@@ -164,7 +165,8 @@ async function fetchCatData() {
           lastWindowStatus === "cat_detected" &&
           row.event1 === "nothing_detected" &&
           windowSessionStart
-        ) {//prevent sensor glitching, if two session very close, merge them
+        ) {
+          //prevent sensor glitching, if two session very close, merge them
           let merge = false;
           let skipCount = 0;
           for (let j = i + 1; j < data.length && skipCount < 200; j++) {
@@ -189,8 +191,8 @@ async function fetchCatData() {
               location: "Window",
             });
             windowSessionStart = null;
-          } 
-            // else {
+          }
+          // else {
           //   // console.log(
           //   //   `[win] Added session from ${bedSessionStart} to ${currentTime}`
           //   // );
@@ -210,7 +212,8 @@ async function fetchCatData() {
           lastFoodStatus === "cat_detected" &&
           row.event3 === "nothing_detected" &&
           foodSessionStart
-        ) {//prevent sensor glitching, if two session very close, merge them
+        ) {
+          //prevent sensor glitching, if two session very close, merge them
           let merge = false;
           let skipCount = 0;
           for (let j = i + 1; j < data.length && skipCount < 60; j++) {
@@ -239,19 +242,22 @@ async function fetchCatData() {
         lastFoodStatus = row.event3;
       }
     }
-//sending processed data out for now section
-updateStatus(
-  latest,
-  bedDurationSeconds,
-  windowDurationSeconds,
-  foodDurationSeconds,
-  bedFrequency,
-  windowFrequency,
-  foodFrequency,
-  data
-);
-//turn off loading screen when data loaded
+    //sending processed data out for now section
+    updateStatus(
+      latest,
+      bedDurationSeconds,
+      windowDurationSeconds,
+      foodDurationSeconds,
+      bedFrequency,
+      windowFrequency,
+      foodFrequency,
+      data
+    );
+    //turn off loading screen when data loaded
+
     if (isInitialLoad) {
+      const todayLog = computeSessionLog(data);
+      await updateCharts(todayLog);
       hideInitialLoading();
       isInitialLoad = false;
     }
@@ -259,7 +265,7 @@ updateStatus(
     console.error("Error fetching cat data:", err);
     if (isInitialLoad) hideInitialLoading();
   }
-  setTimeout(fetchCatData, 3000);//real time refreshes
+  setTimeout(fetchCatData, 3000); //real time refreshes
 }
 
 // Inspect the last 20 rows of each event column for malfunction
@@ -333,14 +339,14 @@ async function fetchChartDataOnly(selectedDate) {
     // don’t load daily if weekly is in progress!!!
     if (isUserSwitchingWeekly) return;
 
-    isUserSwitchingDate = true;//trigger dataset switch
-    showSwitchingLoading();//trigger loading screen
+    isUserSwitchingDate = true; //trigger dataset switch
+    showSwitchingLoading(); //trigger loading screen
 
     const response = await fetch(
       `/catdata?sheet=${encodeURIComponent(selectedDate)}`
     );
     const data = await response.json();
-//basically same logic as fetch cat data
+    //basically same logic as fetch cat data
     if (!data || !Array.isArray(data) || data.length === 0) {
       console.warn("No data found for the selected day.");
       hideSwitchingLoading();
@@ -496,7 +502,6 @@ async function fetchChartDataOnly(selectedDate) {
   }
 }
 
-
 //for weekly processing
 function computeSessionLog(data) {
   let sessionLog = [];
@@ -549,7 +554,6 @@ function computeSessionLog(data) {
   }
   return sessionLog;
 }
-
 
 //getting weekly data!
 async function fetchWeeklyData(weekKey) {
@@ -637,19 +641,19 @@ function updateStatus(
   foodFrequency,
   fullData
 ) {
-  const catBed     = document.getElementById("cat-bed");
+  const catBed = document.getElementById("cat-bed");
   const windowSpot = document.getElementById("window");
-  const foodBowl   = document.getElementById("food-bowl");
+  const foodBowl = document.getElementById("food-bowl");
 
-  [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove("active"));
+  [catBed, windowSpot, foodBowl].forEach((el) => el.classList.remove("active"));
 
-  const bedDetected    = latest.event2 === "cat_detected";
+  const bedDetected = latest.event2 === "cat_detected";
   const windowDetected = latest.event1 === "cat_detected";
-  const foodDetected   = latest.event3 === "cat_detected";
+  const foodDetected = latest.event3 === "cat_detected";
 
-  if (bedDetected)    catBed.classList.add("active");
+  if (bedDetected) catBed.classList.add("active");
   if (windowDetected) windowSpot.classList.add("active");
-  if (foodDetected)   foodBowl.classList.add("active");
+  if (foodDetected) foodBowl.classList.add("active");
 
   updateBoxText(
     catBed,
@@ -681,7 +685,6 @@ async function updateCharts(currentSessionLog) {
   await drawPeakChart(currentSessionLog);
   await drawMovementChart(currentSessionLog);
 }
-
 
 //special data processing for hourly chart
 function prepareHourlySummary(sessionLog) {
@@ -796,165 +799,139 @@ function updateBoxText(box, isActive, durationSeconds, lastDetectedTime) {
   `;
 }
 
-
 //drawing all the charts
 function drawSessionChart(sessionLog) {
   return new Promise((resolve) => {
-    d3.select("#session-chart").html(""); // Clear previous chart
+    d3.select("#session-chart").html(""); // clear
 
     const container = document.getElementById("session-chart");
-    const width = container.clientWidth || 1000;
+    const width  = container.clientWidth  || 1000;
     const height = 700;
     const margin = { top: 20, right: 30, bottom: 60, left: 60 };
-
     const parseTime = d3.timeParse("%Y-%m-%d %H:%M:%S");
 
-    // For weekly mode, remap startTimes to time‐of‐day!!!!
-    let points = sessionLog
-      .map((d) => {
-        const dt = parseTime(d.startTime);
-        return isUserSwitchingWeekly
-          ? {
-              startTime: new Date(
-                1970,
-                0,
-                1,
-                dt.getHours(),
-                dt.getMinutes(),
-                dt.getSeconds()
-              ),
-              duration: d.durationSeconds,
-              loc: d.location,
-            }
-          : { startTime: dt, duration: d.durationSeconds, loc: d.location };
-      })
-      .filter((d) => d.startTime && d.duration > 0);
+    // 1) Build a unified points array
+    const points = sessionLog
+      .map(d => {
+        // parse the timestamp (string → Date)
+        let dt = (typeof d.startTime === "string")
+          ? parseTime(d.startTime)
+          : new Date(d.startTime);
+        if (!dt) return null;
 
-    // X‐scale:
+        if (isUserSwitchingWeekly) {
+          // map to time‐of‐day for weekly mode
+          dt = new Date(
+            1970, 0, 1,
+            dt.getHours(),
+            dt.getMinutes(),
+            dt.getSeconds()
+          );
+        }
+
+        return {
+          startTime:       dt,
+          durationSeconds: d.durationSeconds,
+          location:        d.location
+        };
+      })
+      .filter(d => d && d.startTime instanceof Date && d.durationSeconds > 0);
+
+    // 2) X-scale
     const x = isUserSwitchingWeekly
-      ? d3
-          .scaleTime()
+      ? d3.scaleTime()
           .domain([
-            new Date(1970, 0, 1, 0, 0, 0),
-            new Date(1970, 0, 1, 23, 59, 59),
+            new Date(1970,0,1,0,0,0),
+            new Date(1970,0,1,23,59,59)
           ])
           .range([margin.left, width - margin.right])
-      : d3
-          .scaleTime()
-          .domain(d3.extent(points, (d) => d.startTime))
+      : d3.scaleTime()
+          .domain(d3.extent(points, d => d.startTime))
           .range([margin.left, width - margin.right]);
 
-    const data = sessionLog.map((d) => ({
-      startTime: parseTime(d.startTime),
-      durationSeconds: d.durationSeconds,
-      location: d.location,
-    }));
-
-    const cleanedData = data.filter(
-      (d) => d.startTime && d.durationSeconds > 0 && d.location
-    );
-
-    // Y: session duration using log scale
-    const y = d3
-      .scalePow()
-      .exponent(0.3) // sqrt-compression 0.3 ~ 0.7
-      .domain([0, d3.max(cleanedData, (d) => d.durationSeconds)])
+    // 3) Y-scale (power for compression)
+    const y = d3.scalePow()
+      .exponent(0.3)
+      .domain([0, d3.max(points, d => d.durationSeconds)])
       .range([height - margin.bottom, margin.top]);
 
-    const shape = d3
-      .scaleOrdinal()
-      .domain(["Bed", "Food", "Window"])
+    // 4) Symbol & color scales
+    const shape = d3.scaleOrdinal()
+      .domain(["Bed","Food","Window"])
       .range([d3.symbolCircle, d3.symbolTriangle, d3.symbolSquare]);
 
-    const color = d3
-      .scaleOrdinal()
-      .domain(["Bed", "Food", "Window"])
-      .range(["#D390CE", "#F5AB54", "#60D1DB"]);
+    const color = d3.scaleOrdinal()
+      .domain(["Bed","Food","Window"])
+      .range(["#D390CE","#F5AB54","#60D1DB"]);
 
-    const svg = d3
-      .select("#session-chart")
+    // 5) Create SVG
+    const svg = d3.select("#session-chart")
       .append("svg")
-      .attr("width", "100%")
+      .attr("width","100%")
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("height", height);
 
-    // Draw points
-    svg
-      .append("g")
+    // 6) Draw symbols
+    svg.append("g")
       .selectAll("path")
-      .data(cleanedData)
+      .data(points)
       .join("path")
-      .attr(
-        "transform",
-        (d) => `translate(${x(d.startTime)},${y(d.durationSeconds)})`
-      )
-      .attr(
-        "d",
-        d3
-          .symbol()
-          .type((d) => shape(d.location))
-          .size(100)
-      )
-      .attr("fill", (d) => color(d.location));
+        .attr("transform", d => `translate(${x(d.startTime)},${y(d.durationSeconds)})`)
+        .attr("d", d3.symbol().type(d => shape(d.location)).size(100))
+        .attr("fill", d => color(d.location));
 
-    // X axis (time)
-    svg
-      .append("g")
+    // 7) X axis
+    svg.append("g")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(
-        d3
-          .axisBottom(x)
-          .ticks(d3.timeHour.every(1)) // every ? hours
-          .tickFormat(d3.timeFormat("%H:%M")) // 24-hour format
+        d3.axisBottom(x)
+          .ticks(isUserSwitchingWeekly
+            ? d3.timeHour.every(1)
+            : Math.max(5, width/100))
+          .tickFormat(isUserSwitchingWeekly
+            ? d3.timeFormat("%H:%M")
+            : d3.timeFormat("%b %d %H:%M"))
           .tickSizeOuter(0)
       );
 
-    // Y axis (log scale, formatted)
-    svg
-      .append("g")
+    // 8) Y axis (minutes)
+    svg.append("g")
       .attr("transform", `translate(${margin.left},0)`)
       .call(
-        d3
-          .axisLeft(y)
-          .ticks(18)
-          .tickFormat((d) => `${(d / 60).toFixed(1)} `)
+        d3.axisLeft(y)
+          .ticks(10)
+          .tickFormat(d => (d/60).toFixed(1) + " m")
       );
-    // Y Axis label
-    svg
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("transform", `rotate(-90)`)
-      .attr("x", -height / 2)
-      .attr("y", 15) // distance from the axis
-      .text("Duration (min)")
-      .style("fill", "#333")
-      .style("font-size", "14px");
 
-    // ─── Legend ────────────────────────────────────────────────────────────────
-    const legendData = ["Bed", "Food", "Window"];
-    const legend = svg
-      .append("g")
-      .attr(
-        "transform",
+    // 9) Y axis label
+    svg.append("text")
+      .attr("text-anchor","middle")
+      .attr("transform","rotate(-90)")
+      .attr("x", -height/2)
+      .attr("y", 15)
+      .text("Duration (min)")
+      .style("fill","#333")
+      .style("font-size","14px");
+
+    // 10) Legend
+    const legendData = ["Bed","Food","Window"];
+    const legend = svg.append("g")
+      .attr("transform",
         `translate(${margin.left},${height - margin.bottom + 40})`
       );
 
-    legendData.forEach((loc, i) => {
-      // symbol
-      legend
-        .append("path")
+    legendData.forEach((loc,i) => {
+      legend.append("path")
         .attr("d", d3.symbol().type(shape(loc)).size(100)())
-        .attr("transform", `translate(${i * 140}, 0)`)
+        .attr("transform", `translate(${i*140},0)`)
         .attr("fill", color(loc));
 
-      // label
-      legend
-        .append("text")
-        .attr("x", i * 140 + 10)
-        .attr("y", 5)
+      legend.append("text")
+        .attr("x", i*140 + 12)
+        .attr("y", 4)
         .text(loc)
-        .style("font-size", "12px")
-        .attr("alignment-baseline", "middle");
+        .style("font-size","12px")
+        .attr("alignment-baseline","middle");
     });
 
     resolve();
@@ -1021,7 +998,7 @@ function drawHourlyChart(hourlyData) {
       .attr("transform", `translate(${margin.left},0)`)
       .call(d3.axisLeft(y));
 
-    // Legend 
+    // Legend
     const legend = svg
       .append("g")
       .attr(
