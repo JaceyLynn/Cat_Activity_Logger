@@ -239,17 +239,16 @@ async function fetchCatData() {
       }
     }
 //sending processed data out for now section
-    updateUI(
-      latest,
-      bedDurationSeconds,
-      windowDurationSeconds,
-      foodDurationSeconds,
-      bedFrequency,
-      windowFrequency,
-      foodFrequency,
-      sessionLog,
-      data
-    );
+updateStatus(
+  latest,
+  bedDurationSeconds,
+  windowDurationSeconds,
+  foodDurationSeconds,
+  bedFrequency,
+  windowFrequency,
+  foodFrequency,
+  data
+);
 //turn off loading screen when data loaded
     if (isInitialLoad) {
       hideInitialLoading();
@@ -627,6 +626,49 @@ async function fetchWeeklyData(weekKey) {
   }
 }
 
+function updateStatus(
+  latest,
+  bedDurationSeconds,
+  windowDurationSeconds,
+  foodDurationSeconds,
+  bedFrequency,
+  windowFrequency,
+  foodFrequency,
+  fullData
+) {
+  const catBed     = document.getElementById("cat-bed");
+  const windowSpot = document.getElementById("window");
+  const foodBowl   = document.getElementById("food-bowl");
+
+  [catBed, windowSpot, foodBowl].forEach(el => el.classList.remove("active"));
+
+  const bedDetected    = latest.event2 === "cat_detected";
+  const windowDetected = latest.event1 === "cat_detected";
+  const foodDetected   = latest.event3 === "cat_detected";
+
+  if (bedDetected)    catBed.classList.add("active");
+  if (windowDetected) windowSpot.classList.add("active");
+  if (foodDetected)   foodBowl.classList.add("active");
+
+  updateBoxText(
+    catBed,
+    bedDetected,
+    bedDurationSeconds,
+    findLastDetected(fullData, "event2")
+  );
+  updateBoxText(
+    windowSpot,
+    windowDetected,
+    windowDurationSeconds,
+    findLastDetected(fullData, "event1")
+  );
+  updateBoxText(
+    foodBowl,
+    foodDetected,
+    foodDurationSeconds,
+    findLastDetected(fullData, "event3")
+  );
+}
 
 //POPULATE THE CHART WITH PROCESSED DATA
 async function updateCharts(currentSessionLog) {
