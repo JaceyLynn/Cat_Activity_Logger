@@ -179,7 +179,7 @@ async function fetchCatData() {
           }
 
           if (!merge) {
-            console.log(`[win] Merged session skipped at index ${i}`);
+            // console.log(`[win] Merged session skipped at index ${i}`);
             const durationSec = Math.round(
               (new Date(currentTime) - new Date(windowSessionStart)) / 1000
             );
@@ -189,11 +189,12 @@ async function fetchCatData() {
               location: "Window",
             });
             windowSessionStart = null;
-          } else {
-            console.log(
-              `[win] Added session from ${bedSessionStart} to ${currentTime}`
-            );
-          }
+          } 
+            // else {
+          //   // console.log(
+          //   //   `[win] Added session from ${bedSessionStart} to ${currentTime}`
+          //   // );
+          // }
         }
         lastWindowStatus = row.event1;
       }
