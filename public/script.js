@@ -180,7 +180,6 @@ async function fetchCatData() {
           }
 
           if (!merge) {
-            console.log(`[win] Merged session skipped at index ${i}`);
             const durationSec = Math.round(
               (new Date(currentTime) - new Date(windowSessionStart)) / 1000
             );
