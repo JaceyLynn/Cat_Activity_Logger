@@ -2,6 +2,7 @@
 //   "https://script.google.com/macros/s/AKfycbxn9-kXI1Vsmi_SvtI5M52terMvXbNspXr8HHrFdVRfxBTofhsmB6uXpT_wClNc9sNW-g/exec";
 
 let currentSessionLog = [];
+let isInitialLoad = true;
 let hasInitialLoadCompleted = false;
 let isUserSwitchingDate   = false;
 let isUserSwitchingWeekly = false;
@@ -60,8 +61,6 @@ function hideWeeklyLoading() {
   document.getElementById("weekly-overlay").style.display = "none";
 }
 
-let isInitialLoad = true;
-
 async function fetchCatData() {
   try {
     if (isUserSwitchingDate) return;
@@ -70,7 +69,6 @@ async function fetchCatData() {
 
     const res = await fetch("/catdata");
     const data = await res.json();
-    checkSensorHealth(data);
 
     if (!data || !Array.isArray(data)) return;
 
@@ -661,13 +659,13 @@ function drawSessionChart(sessionLog) {
        // For weekly mode, remap startTimes to time‐of‐day
     let points = sessionLog.map(d => {
       const dt = parseTime(d.startTime);
-      return isWeekly
+      return isUserSwitchingWeekly
         ? { startTime: new Date(1970,0,1,dt.getHours(),dt.getMinutes(),dt.getSeconds()), duration: d.durationSeconds, loc: d.location }
         : { startTime: dt, duration: d.durationSeconds, loc: d.location };
     }).filter(d => d.startTime && d.duration > 0);
 
     // X‐scale:
-    const x = isWeekly
+    const x = isUserSwitchingWeekly
       ? d3.scaleTime()
           .domain([new Date(1970,0,1,0,0,0), new Date(1970,0,1,23,59,59)])
           .range([margin.left, width - margin.right])
@@ -905,11 +903,11 @@ function drawPatternChart(sessionLog) {
       })
       .sort((a, b) => {
         // sort by whichever field we’re going to plot
-        return (isWeekly ? a.timeOfDay : a.original) - (isWeekly ? b.timeOfDay : b.original);
+        return (isUserSwitchingWeekly ? a.timeOfDay : a.original) - (isUserSwitchingWeekly ? b.timeOfDay : b.original);
       });
 
     // 2) X scale: either full‑date extent or fixed 24h
-    const x = isWeekly
+    const x = isUserSwitchingWeekly
       ? d3.scaleTime()
           .domain([ new Date(1970,0,1,0,0,0), new Date(1970,0,1,23,59,59) ])
           .range([margin.left, width - margin.right])
@@ -937,7 +935,7 @@ function drawPatternChart(sessionLog) {
 
     // 5) line generator picks the correct field
     const line = d3.line()
-      .x(d => x(isWeekly ? d.timeOfDay : d.original))
+      .x(d => x(isUserSwitchingWeekly ? d.timeOfDay : d.original))
       .y(d => y(d.location))
       .curve(d3.curveMonotoneX);
 
@@ -961,7 +959,7 @@ function drawPatternChart(sessionLog) {
       .selectAll("circle")
       .data(data)
       .join("circle")
-        .attr("cx", d => x(isWeekly ? d.timeOfDay : d.original))
+        .attr("cx", d => x(isUserSwitchingWeekly ? d.timeOfDay : d.original))
         .attr("cy", d => y(d.location))
         .attr("r", 3)
         .attr("fill", d => color(d.location));
@@ -971,8 +969,8 @@ function drawPatternChart(sessionLog) {
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(
         d3.axisBottom(x)
-          .ticks(isWeekly ? d3.timeHour.every(1) : width / 80)
-          .tickFormat(isWeekly ? d3.timeFormat("%H:%M") : null)
+          .ticks(isUserSwitchingWeekly ? d3.timeHour.every(1) : width / 80)
+          .tickFormat(isUserSwitchingWeekly ? d3.timeFormat("%H:%M") : null)
           .tickSizeOuter(0)
       );
 
