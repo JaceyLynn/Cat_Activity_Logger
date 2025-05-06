@@ -251,8 +251,10 @@ updateStatus(
 );
 //turn off loading screen when data loaded
     if (isInitialLoad) {
-      hideInitialLoading();
-      isInitialLoad = false;
+    const todayLog = computeSessionLog(data);
+    await updateCharts(todayLog);
+    hideInitialLoading();
+    isInitialLoad = false;
     }
   } catch (err) {
     console.error("Error fetching cat data:", err);
@@ -878,18 +880,22 @@ function drawSessionChart(sessionLog) {
         .attr("fill", d => color(d.location));
 
     // X axis
-    svg.append("g")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(
-        d3.axisBottom(x)
-          .ticks(isUserSwitchingWeekly
-            ? d3.timeHour.every(1)
-            : Math.max(5, width/100))
-          .tickFormat(isUserSwitchingWeekly
-            ? d3.timeFormat("%H:%M")
-            : d3.timeFormat("%b %d %H:%M"))
-          .tickSizeOuter(0)
-      );
+const x = d3.scaleTime()
+  .domain([
+    new Date(1970, 0, 1,  0,  0,  0),
+    new Date(1970, 0, 1, 23, 59, 59)
+  ])
+  .range([margin.left, width - margin.right]);
+
+// then later…
+svg.append("g")
+  .attr("transform", `translate(0,${height - margin.bottom})`)
+  .call(
+    d3.axisBottom(x)
+      .ticks(d3.timeHour.every(1))
+      .tickFormat(d3.timeFormat("%H:%M"))
+      .tickSizeOuter(0)
+  );
 
     // Y axis (minutes)
     svg.append("g")
