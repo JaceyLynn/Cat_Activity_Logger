@@ -13,7 +13,7 @@ let isUserSwitchingWeekly = false;
 //auto fill dates from google sheet tabs
 async function populateDateFilter() {
   try {
-    const res = await fetch("/catdata?mode=listSheets");
+    const res = await fetch("/api/catdata?mode=listSheets");
     const dateTabs = await res.json();
 
     console.log("Fetched dateTabs:", dateTabs);
@@ -74,7 +74,7 @@ async function fetchCatData() {
     if (isUserSwitchingDate) return; //if switch date, stop override the charts
     if (isInitialLoad) showInitialLoading(); //trigger initial loading screen
 
-    const res = await fetch("/catdata");
+    const res = await fetch("/api/catdata");
     const data = await res.json();
     //get notification if one event is not logging at all
     checkSensorHealth(data);
@@ -338,7 +338,7 @@ async function fetchChartDataOnly(selectedDate) {
     showSwitchingLoading();//trigger loading screen
 
     const response = await fetch(
-      `/catdata?sheet=${encodeURIComponent(selectedDate)}`
+      `/api/catdata?sheet=${encodeURIComponent(selectedDate)}`
     );
     const data = await response.json();
 //basically same logic as fetch cat data
@@ -560,7 +560,7 @@ async function fetchWeeklyData(weekKey) {
 
   try {
     // Get all tabs
-    const listRes = await fetch("/catdata?mode=listSheets");
+    const listRes = await fetch("/api/catdata?mode=listSheets");
     const allTabs = await listRes.json();
     console.log("dateTabs:", allTabs.slice(0, 10), "...");
 
@@ -596,7 +596,7 @@ async function fetchWeeklyData(weekKey) {
     //Fetch each day’s sheet
     const allDataPerDay = await Promise.all(
       weekTabs.map((day) =>
-        fetch(`/catdata?sheet=${encodeURIComponent(day)}`).then((r) => {
+        fetch(`/api/catdata?sheet=${encodeURIComponent(day)}`).then((r) => {
           if (!r.ok) throw new Error(`HTTP ${r.status} for ${day}`);
           return r.json();
         })
